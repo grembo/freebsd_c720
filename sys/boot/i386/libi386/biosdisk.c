@@ -496,8 +496,9 @@ bd_io(struct disk_devdesc *dev, daddr_t dblk, int blks, caddr_t dest, int write)
 
     /* Decide whether we have to bounce */
     if (VTOP(dest) >> 20 != 0 || (BD(dev).bd_unit < 0x80 &&
+	(VTOP(dest + blks * BD(dev).bd_sectorsize) >= 16384 * 1024 ||
 	(VTOP(dest) >> 16) != (VTOP(dest +
-	blks * BD(dev).bd_sectorsize) >> 16))) {
+	blks * BD(dev).bd_sectorsize) >> 16)))) {
 
 	/* 
 	 * There is a 64k physical boundary somewhere in the

@@ -49,6 +49,7 @@ void
 bios_getmem(void)
 {
     uint64_t size;
+    int64_t v;
 
     /* Parse system memory map */
     v86.ebx = 0;
@@ -109,7 +110,11 @@ bios_getmem(void)
 	v86.eax = 0xe801;
 	v86int();
 	if (!(V86_CY(v86.efl))) {
-	    bios_extmem = ((v86.ecx & 0xffff) + ((v86.edx & 0xffff) * 64)) * 1024;
+	    v = ((v86.ecx & 0xffff) +
+	        ((int64_t)(v86.edx & 0xffff) * 64)) * 1024;
+	    if (v > 0x40000000)
+	        v = 0x40000000;
+            bios_extmem = v;
 	}
     }
     if (bios_extmem == 0) {
@@ -121,8 +126,11 @@ bios_getmem(void)
     }
 
     /* Set memtop to actual top of memory */
-    memtop = memtop_copyin = 0x100000 + bios_extmem;
-
+    memtop = memtop_copyin = 0x100000 + bios_extmem;	/* XXX ignored */
+    memtop = memtop_copyin = 64 * 1024 * 1024;
+    high_heap_size = HEAP_MIN;
+    high_heap_base = memtop - HEAP_MIN;
+    
     /*
      * If we have extended memory and did not find a suitable heap
      * region in the SMAP, use the last 3MB of 'extended' memory as a

@@ -993,8 +993,7 @@ doopen(struct psm_softc *sc, int command_byte)
 
 	/* enable the aux port and interrupt */
 	if (!set_controller_command_byte(sc->kbdc,
-	    kbdc_get_device_mask(sc->kbdc),
-	    (command_byte & KBD_KBD_CONTROL_BITS) |
+	    KBD_AUX_CONTROL_BITS,
 	    KBD_ENABLE_AUX_PORT | KBD_ENABLE_AUX_INT)) {
 		/* CONTROLLER ERROR */
 		disable_aux_dev(sc->kbdc);
@@ -1037,8 +1036,7 @@ reinitialize(struct psm_softc *sc, int doinit)
 
 	/* enable the aux port but disable the aux interrupt and the keyboard */
 	if ((c == -1) || !set_controller_command_byte(sc->kbdc,
-	    kbdc_get_device_mask(sc->kbdc),
-	    KBD_DISABLE_KBD_PORT | KBD_DISABLE_KBD_INT |
+	    KBD_AUX_CONTROL_BITS,
 	    KBD_ENABLE_AUX_PORT | KBD_DISABLE_AUX_INT)) {
 		/* CONTROLLER ERROR */
 		splx(s);
@@ -1088,8 +1086,7 @@ reinitialize(struct psm_softc *sc, int doinit)
 	} else {
 		/* restore the keyboard port and disable the aux port */
 		if (!set_controller_command_byte(sc->kbdc,
-		    kbdc_get_device_mask(sc->kbdc),
-		    (c & KBD_KBD_CONTROL_BITS) |
+		    KBD_AUX_CONTROL_BITS,
 		    KBD_DISABLE_AUX_PORT | KBD_DISABLE_AUX_INT)) {
 			/* CONTROLLER ERROR */
 			log(LOG_ERR, "psm%d: failed to disable the aux port "
@@ -1142,7 +1139,8 @@ psmidentify(driver_t *driver, device_t parent)
 #define	endprobe(v)	do {			\
 	if (bootverbose)			\
 		--verbose;			\
-	kbdc_set_device_mask(sc->kbdc, mask);	\
+        set_controller_command_byte(sc->kbdc,   \
+    KBD_AUX_CONTROL_BITS, KBD_DISABLE_AUX_PORT | KBD_DISABLE_AUX_INT); \
 	kbdc_lock(sc->kbdc, FALSE);		\
 	return (v);				\
 } while (0)
@@ -1154,7 +1152,6 @@ psmprobe(device_t dev)
 	struct psm_softc *sc = device_get_softc(dev);
 	int stat[3];
 	int command_byte;
-	int mask;
 	int rid;
 	int i;
 
@@ -1207,7 +1204,6 @@ psmprobe(device_t dev)
 	empty_both_buffers(sc->kbdc, 10);
 
 	/* save the current command byte; it will be used later */
-	mask = kbdc_get_device_mask(sc->kbdc) & ~KBD_AUX_CONTROL_BITS;
 	command_byte = get_controller_command_byte(sc->kbdc);
 	if (verbose)
 		printf("psm%d: current command byte:%04x\n", unit,
@@ -1224,14 +1220,12 @@ psmprobe(device_t dev)
 	 * enabled during this routine
 	 */
 	if (!set_controller_command_byte(sc->kbdc,
-	    KBD_KBD_CONTROL_BITS | KBD_AUX_CONTROL_BITS,
-	    KBD_DISABLE_KBD_PORT | KBD_DISABLE_KBD_INT |
+	    KBD_AUX_CONTROL_BITS,
 	    KBD_ENABLE_AUX_PORT | KBD_DISABLE_AUX_INT)) {
 		/*
 		 * this is CONTROLLER ERROR; I don't know how to recover
 		 * from this error...
 		 */
-		restore_controller(sc->kbdc, command_byte);
 		printf("psm%d: unable to set the command byte.\n", unit);
 		endprobe(ENXIO);
 	}
@@ -1270,7 +1264,6 @@ psmprobe(device_t dev)
 		recover_from_error(sc->kbdc);
 		if (sc->config & PSM_CONFIG_IGNPORTERROR)
 			break;
-		restore_controller(sc->kbdc, command_byte);
 		if (verbose)
 			printf("psm%d: the aux port is not functioning (%d).\n",
 			    unit, i);
@@ -1293,7 +1286,6 @@ psmprobe(device_t dev)
 		 */
 		if (!reset_aux_dev(sc->kbdc)) {
 			recover_from_error(sc->kbdc);
-			restore_controller(sc->kbdc, command_byte);
 			if (verbose)
 				printf("psm%d: failed to reset the aux "
 				    "device.\n", unit);
@@ -1315,7 +1307,6 @@ psmprobe(device_t dev)
 	if (!enable_aux_dev(sc->kbdc) || !disable_aux_dev(sc->kbdc)) {
 		/* MOUSE ERROR */
 		recover_from_error(sc->kbdc);
-		restore_controller(sc->kbdc, command_byte);
 		if (verbose)
 			printf("psm%d: failed to enable the aux device.\n",
 			    unit);
@@ -1337,7 +1328,6 @@ psmprobe(device_t dev)
 	/* verify the device is a mouse */
 	sc->hw.hwid = get_aux_id(sc->kbdc);
 	if (!is_a_mouse(sc->hw.hwid)) {
-		restore_controller(sc->kbdc, command_byte);
 		if (verbose)
 			printf("psm%d: unknown device type (%d).\n", unit,
 			    sc->hw.hwid);
@@ -1436,20 +1426,17 @@ psmprobe(device_t dev)
 
 	/* disable the aux port for now... */
 	if (!set_controller_command_byte(sc->kbdc,
-	    KBD_KBD_CONTROL_BITS | KBD_AUX_CONTROL_BITS,
-	    (command_byte & KBD_KBD_CONTROL_BITS) |
+	    KBD_AUX_CONTROL_BITS,
 	    KBD_DISABLE_AUX_PORT | KBD_DISABLE_AUX_INT)) {
 		/*
 		 * this is CONTROLLER ERROR; I don't know the proper way to
 		 * recover from this error...
 		 */
-		restore_controller(sc->kbdc, command_byte);
 		printf("psm%d: unable to set the command byte.\n", unit);
 		endprobe(ENXIO);
 	}
 
 	/* done */
-	kbdc_set_device_mask(sc->kbdc, mask | KBD_AUX_CONTROL_BITS);
 	kbdc_lock(sc->kbdc, FALSE);
 	return (0);
 }
@@ -1596,8 +1583,7 @@ psmopen(struct cdev *dev, int flag, int fmt, struct thread *td)
 
 	/* enable the aux port and temporalily disable the keyboard */
 	if (command_byte == -1 || !set_controller_command_byte(sc->kbdc,
-	    kbdc_get_device_mask(sc->kbdc),
-	    KBD_DISABLE_KBD_PORT | KBD_DISABLE_KBD_INT |
+	    KBD_AUX_CONTROL_BITS,
 	    KBD_ENABLE_AUX_PORT | KBD_DISABLE_AUX_INT)) {
 		/* CONTROLLER ERROR; do you know how to get out of this? */
 		kbdc_lock(sc->kbdc, FALSE);
@@ -1649,8 +1635,7 @@ psmclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 
 	/* disable the aux interrupt and temporalily disable the keyboard */
 	if (!set_controller_command_byte(sc->kbdc,
-	    kbdc_get_device_mask(sc->kbdc),
-	    KBD_DISABLE_KBD_PORT | KBD_DISABLE_KBD_INT |
+	    KBD_AUX_CONTROL_BITS,
 	    KBD_ENABLE_AUX_PORT | KBD_DISABLE_AUX_INT)) {
 		log(LOG_ERR,
 		    "psm%d: failed to disable the aux int (psmclose).\n",
@@ -1691,8 +1676,7 @@ psmclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 	}
 
 	if (!set_controller_command_byte(sc->kbdc,
-	    kbdc_get_device_mask(sc->kbdc),
-	    (command_byte & KBD_KBD_CONTROL_BITS) |
+	    KBD_AUX_CONTROL_BITS,
 	    KBD_DISABLE_AUX_PORT | KBD_DISABLE_AUX_INT)) {
 		/*
 		 * CONTROLLER ERROR;
@@ -1850,8 +1834,7 @@ block_mouse_data(struct psm_softc *sc, int *c)
 	s = spltty();
 	*c = get_controller_command_byte(sc->kbdc);
 	if ((*c == -1) || !set_controller_command_byte(sc->kbdc,
-	    kbdc_get_device_mask(sc->kbdc),
-	    KBD_DISABLE_KBD_PORT | KBD_DISABLE_KBD_INT |
+	    KBD_AUX_CONTROL_BITS,
 	    KBD_ENABLE_AUX_PORT | KBD_DISABLE_AUX_INT)) {
 		/* this is CONTROLLER ERROR */
 		splx(s);
@@ -1914,8 +1897,8 @@ unblock_mouse_data(struct psm_softc *sc, int c)
 
 	/* restore ports and interrupt */
 	if (!set_controller_command_byte(sc->kbdc,
-	    kbdc_get_device_mask(sc->kbdc),
-	    c & (KBD_KBD_CONTROL_BITS | KBD_AUX_CONTROL_BITS))) {
+	    KBD_AUX_CONTROL_BITS,
+	    c & (KBD_AUX_CONTROL_BITS))) {
 		/*
 		 * CONTROLLER ERROR; this is serious, we may have
 		 * been left with the inaccessible keyboard and

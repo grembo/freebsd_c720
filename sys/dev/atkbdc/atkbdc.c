@@ -1115,19 +1115,6 @@ test_aux_port(KBDC p)
 }
 
 int
-kbdc_get_device_mask(KBDC p)
-{
-    return kbdcp(p)->command_mask;
-}
-
-void
-kbdc_set_device_mask(KBDC p, int mask)
-{
-    kbdcp(p)->command_mask = 
-	mask & (KBD_KBD_CONTROL_BITS | KBD_AUX_CONTROL_BITS);
-}
-
-int
 get_controller_command_byte(KBDC p)
 {
     if (kbdcp(p)->command_byte != -1)

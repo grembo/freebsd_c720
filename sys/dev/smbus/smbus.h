@@ -32,6 +32,7 @@
 struct smbus_softc {
 	device_t owner;		/* smbus owner device structure */
 	struct mtx lock;
+	unsigned char addrs[112];
 };
 
 void smbus_generic_intr(device_t dev, u_char devaddr, char low, char high, int err);
