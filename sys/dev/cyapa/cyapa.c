@@ -52,7 +52,7 @@
  *       |       Left         |            |
  *       |      Button        +------------+
  *       |                    |   Right    |
- *       |                    |   Button   | 
+ *       |                    |   Button   |
  *       +--------------------+............|
  *       |     Thumb/Button Area           | 15%
  *       +---------------------------------+
@@ -76,10 +76,10 @@
  * Thumb/Button Area      - The lower 15%* of the trackpad will not affect
  *                          the mouse cursor position. This allows for high
  *                          precision clicking, by controlling the cursor
- *                          with the index finger and pushing/holding the 
+ *                          with the index finger and pushing/holding the
  *                          pad down with the thumb.
- *                          * can be changed using sysctl 
- * 
+ *                          * can be changed using sysctl
+ *
  * Track-pad button       - Push physical button. Left 2/3rds of the pad
  *                          will issue a LEFT button event, upper right
  *                          corner will issue a MIDDLE button event,
@@ -128,7 +128,7 @@
 #define CYAPA_BUFSIZE	128			/* power of 2 */
 #define CYAPA_BUFMASK	(CYAPA_BUFSIZE - 1)
 
-#define ZSCALE		15 // was 10 
+#define ZSCALE		15 // was 10
 
 #define TIME_TO_IDLE	(hz * 10)
 #define TIME_TO_RESET	(hz * 3)
