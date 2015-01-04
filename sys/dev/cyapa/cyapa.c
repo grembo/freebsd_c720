@@ -1427,7 +1427,7 @@ cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs)
     			}
 			sc->track_id = regs->touch[i].id;
 		}
-		else if ((sc->track_but || CYAPA_TOUCH_Y(regs, i) >= thumbarea_begin)&& newfinger && afingers == 2) {
+		else if ((sc->track_but || CYAPA_TOUCH_Y(regs, i) >= thumbarea_begin) && newfinger && afingers == 2) {
 			j = regs->touch[0].id == sc->track_id ? 1 : 0;
 			if (CYAPA_TOUCH_Y(regs, j) < thumbarea_begin) {
     			    i = j;
