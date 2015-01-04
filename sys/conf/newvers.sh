@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
-# $FreeBSD: head/sys/conf/newvers.sh 274523 2014-11-14 18:44:13Z delphij $
+# $FreeBSD: head/sys/conf/newvers.sh 276075 2014-12-22 19:10:21Z imp $
 
 TYPE="FreeBSD"
 REVISION="11.0"
@@ -52,7 +52,11 @@ else
 fi
 
 b=share/examples/etc/bsd-style-copyright
-year=$(sed -Ee '/^Copyright .* The FreeBSD Project/!d;s/^.*1992-([0-9]*) .*$/\1/g' ${SYSDIR}/../COPYRIGHT)
+if [ -r "${SYSDIR}/../COPYRIGHT" ]; then
+	year=$(sed -Ee '/^Copyright .* The FreeBSD Project/!d;s/^.*1992-([0-9]*) .*$/\1/g' ${SYSDIR}/../COPYRIGHT)
+else
+	year=$(date +%Y)
+fi
 # look for copyright template
 for bsd_copyright in ../$b ../../$b ../../../$b /usr/src/$b /usr/$b
 do

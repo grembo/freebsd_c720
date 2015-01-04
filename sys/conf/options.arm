@@ -1,10 +1,11 @@
-#$FreeBSD: head/sys/conf/options.arm 274937 2014-11-24 00:02:15Z ian $
+#$FreeBSD: head/sys/conf/options.arm 276393 2014-12-30 02:51:04Z ian $
 ARM9_CACHE_WRITE_THROUGH	opt_global.h
 ARMV6			opt_global.h
 ARM_CACHE_LOCK_ENABLE	opt_global.h
 ARM_KERN_DIRECTMAP	opt_vm.h
 ARM_L2_PIPT		opt_global.h
 ARM_MANY_BOARD		opt_global.h
+ARM_NEW_PMAP		opt_global.h
 ARM_WANT_TP_ADDRESS	opt_global.h
 COUNTS_PER_SEC		opt_timer.h
 CPU_ARM9		opt_global.h

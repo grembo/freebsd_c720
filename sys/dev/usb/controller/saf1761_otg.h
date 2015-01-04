@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/saf1761_otg.h 266831 2014-05-29 10:06:18Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/saf1761_otg.h 275467 2014-12-03 21:48:30Z hselasky $ */
 /*-
  * Copyright (c) 2014 Hans Petter Selasky <hselasky@FreeBSD.org>
  * All rights reserved.
@@ -139,10 +139,13 @@ struct saf1761_otg_softc {
 	bus_space_tag_t sc_io_tag;
 	bus_space_handle_t sc_io_hdl;
 
+	uint32_t sc_host_async_busy_map[2];
 	uint32_t sc_host_async_map;
 	uint32_t sc_host_async_suspend_map;
+	uint32_t sc_host_intr_busy_map[2];
 	uint32_t sc_host_intr_map;
 	uint32_t sc_host_intr_suspend_map;
+	uint32_t sc_host_isoc_busy_map[2];
 	uint32_t sc_host_isoc_map;
 	uint32_t sc_host_isoc_suspend_map;
 	uint32_t sc_intr_enable;	/* enabled interrupts */

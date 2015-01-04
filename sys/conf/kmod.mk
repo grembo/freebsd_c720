@@ -1,5 +1,5 @@
 #	From: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
-# $FreeBSD: head/sys/conf/kmod.mk 274184 2014-11-06 16:48:37Z imp $
+# $FreeBSD: head/sys/conf/kmod.mk 276645 2015-01-04 00:12:30Z ian $
 #
 # The include file <bsd.kmod.mk> handles building and installing loadable
 # kernel modules.
@@ -89,7 +89,6 @@ CFLAGS+=	-D_KERNEL
 CFLAGS+=	-DKLD_MODULE
 
 # Don't use any standard or source-relative include directories.
-CSTD=		c99
 NOSTDINC=	-nostdinc
 CFLAGS:=	${CFLAGS:N-I*} ${NOSTDINC} ${INCLMAGIC} ${CFLAGS:M-I*}
 .if defined(KERNBUILDDIR)
@@ -117,6 +116,13 @@ LDFLAGS+=	-d -warn-common
 CFLAGS+=	${DEBUG_FLAGS}
 .if ${MACHINE_CPUARCH} == amd64
 CFLAGS+=	-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer
+.endif
+
+# Temporary workaround for PR 196407, which contains the fascinating details.
+# Don't allow clang to use fpu instructions or registers in kernel modules.
+.if ${MACHINE_CPUARCH} == arm
+CFLAGS.clang+=	-mllvm -arm-use-movt=0
+CFLAGS.clang+=	-mfpu=none
 .endif
 
 .if ${MACHINE_CPUARCH} == powerpc

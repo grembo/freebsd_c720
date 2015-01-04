@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/boot/i386/libi386/spinconsole.c 199857 2009-11-27 04:00:52Z sobomax $");
+__FBSDID("$FreeBSD: head/sys/boot/i386/libi386/spinconsole.c 276074 2014-12-22 19:10:11Z imp $");
 
 #include <stand.h>
 #include <bootstrap.h>
@@ -86,9 +86,11 @@ spinc_putchar(int c)
 	if (now < (lasttime + 1))
 		return;
 	lasttime = now;
+#ifdef TERM_EMU
 	get_pos(&curx, &cury);
 	if (curx > 0)
 		curs_move(&curx, &cury, curx - 1, cury);
+#endif
 	vidc_biosputchar((char)tw_chars);
 	tw_chars = (tw_chars >> 8) | ((tw_chars & (unsigned long)0xFF) << 24);
 }
