@@ -105,6 +105,7 @@ MAN=	aac.4 \
 	cue.4 \
 	cxgb.4 \
 	cxgbe.4 \
+	cyapa.4 \
 	cy.4 \
 	da.4 \
 	dc.4 \

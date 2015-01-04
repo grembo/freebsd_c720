@@ -66,6 +66,7 @@
 !/share/man/man4
 /share/man/man4/*
 !/share/man/man4/Makefile
+!/share/man/man4/cyapa.4
 !/share/man/man4/ig4.4
 !/share/man/man4/isl.4
 
