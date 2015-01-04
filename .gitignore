@@ -60,6 +60,15 @@
 /sys/modules/*
 !/sys/modules/i2c
 
+/share/*
+!/share/man
+/share/man/*
+!/share/man/man4
+/share/man/man4/*
+!/share/man/man4/Makefile
+!/share/man/man4/ig4.4
+!/share/man/man4/isl.4
+
 /.arcconfig
 /.arclint
 /COPYRIGHT
@@ -85,7 +94,6 @@
 /rescue
 /sbin
 /secure
-/share
 /tests
 /tools
 /usr.bin

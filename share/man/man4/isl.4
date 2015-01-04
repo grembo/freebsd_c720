@@ -1,0 +1,82 @@
+.\" Copyright (c) 2015 Michael Gmelin <freebsd@grem.de>
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" $FreeBSD: $
+.\"
+.Dd January 4, 2015
+.Dt ISL 4
+.Os
+.Sh NAME
+.Nm isl
+.Nd Intersil(TM) I2C ISL29018 sensor driver
+.Sh SYNOPSIS
+To compile this driver into the kernel, place the following lines into
+your kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device isl"
+.Cd "device ig4"
+.Cd "device smbus"
+.Ed
+.Pp
+Alternatively, to load the driver as a module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+isl_load="YES"
+ig4_load="YES"
+.Ed
+.Sh DESCRIPTION
+The
+.Em isl
+driver provides access to sensor data provided by the Intersil(TM) I2C
+ISL29018 Digital Ambient Light Sensor and Proximity Sensor with Interrupt
+Function. Functionality is basic and provided over the
+.Xr sysctl 8
+interface.
+.Sh SYSCTL VARIABLES
+The following
+.Xr sysctl 8
+variables are available:
+.Bl -tag -width ".Va dev.isl.X.resolution"
+.It Va dev.isl.X.als
+Current ALS (Ambient Light Sensor) readout.
+.It Va dev.isl.X.ir
+Current IR (InfraRed) sensor readout.
+.It Va dev.isl.X.prox
+Current proximity sensor readout.
+.It Va dev.isl.X.resolution
+Current sensor resolution.
+.It Va dev.isl.X.range
+Current sensor range.
+.Sh SEE ALSO
+.Xr ig4 4 ,
+.Xr smbus 4
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm
+driver was written by
+.An Michael Gmelin Aq Mt freebsd@grem.de .
+.Pp
+This manual page was written by
+.An Michael Gmelin Aq Mt freebsd@grem.de .
