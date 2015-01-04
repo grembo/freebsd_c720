@@ -1184,12 +1184,12 @@ cyapaioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread 
 		break;
 
 	case MOUSE_SETLEVEL:
-		if ((*(int *)data != 0) &&
-		    (*(int *)data != 2)) {
+		if ((*(int *)data < 0) &&
+		    (*(int *)data > 2)) {
 			error = EINVAL;
 			break;
                 }
-		sc->mode.level = *(int *)data;
+		sc->mode.level = *(int *)data ? 2 : 0;
 		sc->zenabled = sc->mode.level ? 1 : 0;
 		break;
 
