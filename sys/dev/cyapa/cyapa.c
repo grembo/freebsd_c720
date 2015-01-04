@@ -84,7 +84,8 @@
  *                          will issue a LEFT button event, upper right
  *                          corner will issue a MIDDLE button event,
  *                          lower right corner will issue a RIGHT button
- *                          event.
+ *                          event. Optional tap support can be enabled
+ *                          and configured using sysctl.
  *
  *				WARNINGS
  *
@@ -229,15 +230,24 @@ SYSCTL_INT(_debug, OID_AUTO, cyapa_norm_freq, CTLFLAG_RW,
 static int cyapa_minpressure = 12;
 SYSCTL_INT(_debug, OID_AUTO, cyapa_minpressure, CTLFLAG_RW,
 		&cyapa_minpressure, 0, "Minimum pressure to detect finger");
-static int cyapa_scroll_wait_ms = 50;
-SYSCTL_INT(_debug, OID_AUTO, cyapa_scroll_wait_ms, CTLFLAG_RW,
-		&cyapa_scroll_wait_ms, 0, "Wait N ms before starting to scroll");
-static int cyapa_scroll_stick_ms = 150;
-SYSCTL_INT(_debug, OID_AUTO, cyapa_scroll_stick_ms, CTLFLAG_RW,
-		&cyapa_scroll_stick_ms, 0, "Prevent cursor move on single finger for N ms after scroll");
-static int cyapa_rest_ms = 50;
-SYSCTL_INT(_debug, OID_AUTO, cyapa_rest_ms, CTLFLAG_RW,
-		&cyapa_rest_ms, 0, "ms to detect resting cursor");
+static int cyapa_enable_tapclick = 0;
+SYSCTL_INT(_debug, OID_AUTO, cyapa_enable_tapclick, CTLFLAG_RW,
+		&cyapa_enable_tapclick, 0, "Enable tap to click");
+static int cyapa_tapclick_min_ticks = 1;
+SYSCTL_INT(_debug, OID_AUTO, cyapa_tapclick_min_ticks, CTLFLAG_RW,
+		&cyapa_tapclick_min_ticks, 0, "Minimum tap duration for click");
+static int cyapa_tapclick_max_ticks = 8;
+SYSCTL_INT(_debug, OID_AUTO, cyapa_tapclick_max_ticks, CTLFLAG_RW,
+		&cyapa_tapclick_max_ticks, 0, "Maximum tap duration for click");
+static int cyapa_move_min_ticks = 4;
+SYSCTL_INT(_debug, OID_AUTO, cyapa_move_min_ticks, CTLFLAG_RW,
+		&cyapa_move_min_ticks, 0, "Minimum ticks before cursor position is changed");
+static int cyapa_scroll_wait_ticks = 5;
+SYSCTL_INT(_debug, OID_AUTO, cyapa_scroll_wait_ticks, CTLFLAG_RW,
+		&cyapa_scroll_wait_ticks, 0, "Wait N ticks before starting to scroll");
+static int cyapa_scroll_stick_ticks = 15;
+SYSCTL_INT(_debug, OID_AUTO, cyapa_scroll_stick_ticks, CTLFLAG_RW,
+		&cyapa_scroll_stick_ticks, 0, "Prevent cursor move on single finger for N ticks after scroll");
 static int cyapa_thumbarea_percent = 15;
 SYSCTL_INT(_debug, OID_AUTO, cyapa_thumbarea_percent, CTLFLAG_RW,
 		&cyapa_thumbarea_percent, 0, "Size of bottom thumb area in percent");
@@ -993,8 +1003,8 @@ again:
 				sc->zenabled = 1;	/* z-axis mode */
 			else if (sc->zenabled == -3 && sc->mode.rate == 80)
 				sc->zenabled = 2;	/* z-axis+but4/5 */
-                        if (sc->mode.level)
-                                sc->zenabled = 1;
+			if (sc->mode.level)
+				sc->zenabled = 1;
 			break;
 		case 0xF4:
 			/*
@@ -1188,7 +1198,7 @@ cyapaioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread 
 		    (*(int *)data > 2)) {
 			error = EINVAL;
 			break;
-                }
+		}
 		sc->mode.level = *(int *)data ? 2 : 0;
 		sc->zenabled = sc->mode.level ? 1 : 0;
 		break;
@@ -1295,9 +1305,13 @@ cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs)
 	short y;
 	short z;
 	short newfinger;
+	short lessfingers;
+	short click_x;
+	short click_y;
 	uint16_t but;	/* high bits used for simulated but4/but5 */
 
 	thumbarea_begin = sc->cap_resy - ((sc->cap_resy *  cyapa_thumbarea_percent) / 100);
+	click_x = click_y = 0;
 	
 	/*
 	 * If the device is not running the rest of the status
@@ -1380,13 +1394,15 @@ cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs)
 		break;
 	}
 	newfinger = sc->track_nfingers < afingers;
+	lessfingers = sc->track_nfingers > afingers;
 	sc->track_nfingers = afingers;
-	
 
 	/*
 	 * Lookup and track finger indexes in the touch[] array.
 	 */
 	if (afingers == 0) {
+		click_x = sc->track_x;
+		click_y = sc->track_y;
 		sc->track_x = -1;
 		sc->track_y = -1;
 		sc->track_z = -1;
@@ -1442,7 +1458,7 @@ cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs)
 	/*
 	 * Two finger scrolling - reset after timeout
 	 */
-	if (sc->track_z != -1 && afingers != 2 && (sc->poll_ticks - sc->track_z_ticks) > (cyapa_scroll_stick_ms * cyapa_norm_freq) / 1000) {
+	if (sc->track_z != -1 && afingers != 2 && (sc->poll_ticks - sc->track_z_ticks) > cyapa_scroll_stick_ticks) {
 	    sc->track_z = -1;
 	    sc->track_z_ticks = 0;
 	}
@@ -1451,13 +1467,13 @@ cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs)
 	 * Initiate two finger scrolling
 	 */
 	if (!(regs->fngr & CYAPA_FNGR_LEFT) && ((afingers && sc->track_z != -1) || (afingers == 2 && CYAPA_TOUCH_Y(regs, 0) < thumbarea_begin && CYAPA_TOUCH_Y(regs, 1) < thumbarea_begin))) {
-		if (afingers == 2 && (sc->poll_ticks - sc->finger2_ticks) > (cyapa_scroll_wait_ms * cyapa_norm_freq) / 1000) {
-			if (sc->track_z == -1) {
-			    sc->delta_z = 0;
-			}
+		if (afingers == 2 && (sc->poll_ticks - sc->finger2_ticks) > cyapa_scroll_wait_ticks) {
 			
 			z = (CYAPA_TOUCH_Y(regs, 0) + CYAPA_TOUCH_Y(regs, 1)) >> 1;
 			sc->delta_z += z / ZSCALE - sc->track_z;
+			if (sc->track_z == -1) {
+			    sc->delta_z = 0;
+			}
 			if (sc->touch_z == -1)
 			    sc->touch_z = z;	/* not used atm */
 			sc->track_z = z / ZSCALE;
@@ -1469,7 +1485,9 @@ cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs)
 		 */
 		x = CYAPA_TOUCH_X(regs, i);
 		y = CYAPA_TOUCH_Y(regs, i);
-		if (sc->track_x != -1 && sc->track_y < thumbarea_begin) {
+		click_x = x;
+		click_y = y;
+		if (sc->track_x != -1 && sc->track_y < thumbarea_begin && (afingers > 1 || (sc->poll_ticks - sc->finger1_ticks) >= cyapa_move_min_ticks)) {
 			sc->delta_x += x - sc->track_x;
 			sc->delta_y -= y - sc->track_y;
 			if (sc->delta_x > sc->cap_resx)
@@ -1504,13 +1522,24 @@ cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs)
 	/*
 	 * Select finger (L = 2/3x, M = 1/3u, R = 1/3d)
 	 */
-	if (regs->fngr & CYAPA_FNGR_LEFT) {
+	int is_tapclick = (cyapa_enable_tapclick && lessfingers && afingers == 0 &&
+	    sc->poll_ticks - sc->finger1_ticks >= cyapa_tapclick_min_ticks &&
+	    sc->poll_ticks - sc->finger1_ticks < cyapa_tapclick_max_ticks);
+
+	if (regs->fngr & CYAPA_FNGR_LEFT || is_tapclick) {
 	    if (sc->track_but) {
 		but = sc->track_but;
 	    } else if (afingers == 1) {
-		if (sc->track_x < sc->cap_resx * 2 / 3)
+		if (click_x < sc->cap_resx * 2 / 3)
 			but = CYAPA_FNGR_LEFT;
-		else if (sc->track_y < sc->cap_resy / 2)
+		else if (click_y < sc->cap_resy / 2)
+			but = CYAPA_FNGR_MIDDLE;
+		else
+			but = CYAPA_FNGR_RIGHT;
+	    } else if (is_tapclick) {
+		if (click_x < sc->cap_resx * 2 / 3 || cyapa_enable_tapclick < 2)
+			but = CYAPA_FNGR_LEFT;
+		else if (click_y < sc->cap_resy / 2 && cyapa_enable_tapclick > 2)
 			but = CYAPA_FNGR_MIDDLE;
 		else
 			but = CYAPA_FNGR_RIGHT;
