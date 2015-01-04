@@ -116,6 +116,7 @@
 #include <sys/vnode.h>
 #include <sys/sysctl.h>
 #include <sys/event.h>
+#include <sys/mouse.h>
 
 #include <dev/smbus/smbconf.h>
 #include <dev/smbus/smbus.h>
@@ -193,9 +194,9 @@ struct cyapa_softc {
 	int	reporting_mode;		/* 0=disabled 1=enabled */
 	int	scaling_mode;		/* 0=1:1 1=2:1 */
 	int	remote_mode;		/* 0 for streaming mode */
-	int	resolution;		/* count/mm */
-	int	sample_rate;		/* samples/sec */
 	int	zenabled;		/* z-axis enabled (mode 1 or 2) */
+	mousehw_t hw;			/* hardware information */
+	mousemode_t mode;		/* mode */
 	int	poll_ticks;
 };
 
@@ -544,6 +545,19 @@ cyapa_attach(device_t dev)
 		sc->cap_resx,
 		sc->cap_resy);
 
+	sc->hw.buttons = 5;
+	sc->hw.iftype = MOUSE_IF_PS2;
+	sc->hw.type = MOUSE_MOUSE;
+	sc->hw.model = MOUSE_MODEL_INTELLI;
+	sc->hw.hwid = addr;
+
+	sc->mode.protocol = MOUSE_PROTO_PS2;
+	sc->mode.rate = 100;
+	sc->mode.resolution = 4;
+	sc->mode.accelfactor = 1;
+	sc->mode.level = 0;
+	sc->mode.packetsize = MOUSE_PS2_PACKETSIZE;
+
 	/*
 	 * Setup input event tracking
 	 */
@@ -838,7 +852,7 @@ again:
 				cmd_completed = 0;
 				break;
 			}
-			sc->resolution = fifo_read_char(&sc->wfifo);
+			sc->mode.resolution = fifo_read_char(&sc->wfifo);
 			fifo_write_char(&sc->rfifo, 0xFA);
 			break;
 		case 0xE9:
@@ -959,7 +973,7 @@ again:
 				cmd_completed = 0;
 				break;
 			}
-			sc->sample_rate = fifo_read_char(&sc->wfifo);
+			sc->mode.rate = fifo_read_char(&sc->wfifo);
 			fifo_write_char(&sc->rfifo, 0xFA);
 
 			/*
@@ -969,16 +983,18 @@ again:
 			 * We support id 0x03 (no 4th or 5th button).
 			 * We support id 0x04 (w/ 4th and 5th button).
 			 */
-			if (sc->zenabled == 0 && sc->sample_rate == 200)
+			if (sc->zenabled == 0 && sc->mode.rate == 200)
 				sc->zenabled = -1;
-			else if (sc->zenabled == -1 && sc->sample_rate == 100)
+			else if (sc->zenabled == -1 && sc->mode.rate == 100)
 				sc->zenabled = -2;
-			else if (sc->zenabled == -1 && sc->sample_rate == 200)
+			else if (sc->zenabled == -1 && sc->mode.rate == 200)
 				sc->zenabled = -3;
-			else if (sc->zenabled == -2 && sc->sample_rate == 80)
+			else if (sc->zenabled == -2 && sc->mode.rate == 80)
 				sc->zenabled = 1;	/* z-axis mode */
-			else if (sc->zenabled == -3 && sc->sample_rate == 80)
+			else if (sc->zenabled == -3 && sc->mode.rate == 80)
 				sc->zenabled = 2;	/* z-axis+but4/5 */
+                        if (sc->mode.level)
+                                sc->zenabled = 1;
 			break;
 		case 0xF4:
 			/*
@@ -1002,8 +1018,8 @@ again:
 			 *  enter stream mode)
 			 */
 			fifo_write_char(&sc->rfifo, 0xFA);
-			sc->sample_rate = 100;
-			sc->resolution = 4;
+			sc->mode.rate = 100;
+			sc->mode.resolution = 4;
 			sc->scaling_mode = 0;
 			sc->reporting_mode = 0;
 			sc->remote_mode = 0;
@@ -1033,6 +1049,7 @@ again:
 			sc->delta_y = 0;
 			sc->delta_z = 0;
 			sc->zenabled = 0;
+			sc->mode.level = 0;
 			break;
 		default:
 			printf("unknown command %02x\n", sc->ps2_cmd);
@@ -1131,34 +1148,56 @@ static int
 cyapaioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread *td)
 {
 	struct cyapa_softc *sc = dev->si_drv1;
-	device_t bus;		/* smbbus */
-	void *s = NULL;
-	int error;
+	int error = 0;
 
 	if (sc == NULL)
 		return (ENXIO);
-	if (s == NULL)
-		return (EINVAL);
 
-	/*
-	 * NOTE: smbus_*() functions automatically recurse the parent to
-	 *	 get to the actual device driver.
-	 */
-	bus = device_get_parent(sc->dev);	/* smbus */
-
-	/* Allocate the bus. */
-	if ((error = smbus_request_bus(bus, sc->dev,
-			(fflag & O_NONBLOCK) ?
-			SMB_DONTWAIT : (SMB_WAIT | SMB_INTR))))
-		return (error);
-
+	cyapa_lock(sc);
 	switch (cmd) {
+	case MOUSE_GETHWINFO:
+		*(mousehw_t *)data = sc->hw;
+		if (sc->mode.level == 0)
+			((mousehw_t *)data)->model = MOUSE_MODEL_GENERIC;
+		break;
+
+	case MOUSE_GETMODE:
+		*(mousemode_t *)data = sc->mode;
+		((mousemode_t *)data)->resolution =
+			MOUSE_RES_LOW - sc->mode.resolution;
+		switch (sc->mode.level) {
+		case 0:
+			((mousemode_t *)data)->protocol = MOUSE_PROTO_PS2;
+			((mousemode_t *)data)->packetsize =
+			    MOUSE_PS2_PACKETSIZE;
+			break;
+		case 2:
+			((mousemode_t *)data)->protocol = MOUSE_PROTO_PS2;
+			((mousemode_t *)data)->packetsize =
+			    MOUSE_PS2_PACKETSIZE + 1;
+			break;
+		}
+		break;
+
+	case MOUSE_GETLEVEL:
+		*(int *)data = sc->mode.level;
+		break;
+
+	case MOUSE_SETLEVEL:
+		if ((*(int *)data != 0) &&
+		    (*(int *)data != 2)) {
+			error = EINVAL;
+			break;
+                }
+		sc->mode.level = *(int *)data;
+		sc->zenabled = sc->mode.level ? 1 : 0;
+		break;
+
 	default:
 		error = ENOTTY;
 		break;
 	}
-
-	smbus_release_bus(bus, sc->dev);
+	cyapa_unlock(sc);
 
 	return (error);
 }
