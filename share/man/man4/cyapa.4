@@ -24,7 +24,7 @@
 .\"
 .\" $FreeBSD: $
 .\"
-.Dd January 4, 2015
+.Dd January 5, 2015
 .Dt CYAPA 4
 .Os
 .Sh NAME
@@ -68,44 +68,67 @@ is supported properly.
           +---------------------------------+
 .Ed
 .Ss Trackpad features
-.Bl -tag -width "debug.cyapa_thumbarea_percent"
+.Bl -tag
 .It Va Two finger scrolling
 Use two fingers for Z axis scrolling.
 .It Va Button down/second finger
 While one finger clicks and holds down the touchpad, the second one can be
 used to move the mouse cursor.  Useful for drawing or selecting text.
-.It Va Thumb/Button Area
+.It Va Thumb/Button area
 The lower 15% of the trackpad will not affect the mouse cursor position.
 This allows for high precision clicking, by controlling the cursor with the
 index finger and pushing/holding the pad down with the thumb.
 .It Va Trackpad button
 Push physical button. Left 2/3rds of the pad will issue a LEFT button event,
 upper right corner will issue a MIDDLE button event, lower right corner will
-issue a RIGHT button.
+issue a RIGHT button. Optionally tap to click can be enabled (see below).
 .El
 .Sh SYSCTL VARIABLES
 The following
 .Xr sysctl 8
 variables are available:
-.Bl -tag -width "debug.cyapa_thumbarea_percent"
+.Bl -tag
 .It Va debug.cyapa_idle_freq
-Scan frequence in idle mode (default is 1).
+Scan frequence in idle mode, the default is 1.
 .It Va debug.cyapa_slow_freq
-Scan frequence in slow mode (default is 20).
+Scan frequence in slow mode, the default is 20.
 .It Va debug.cyapa_norm_freq
-Scan frequence in normal mode (default is 100).
+Scan frequence in normal mode, the default is 100.
 .It Va debug.cyapa_minpressure
-Minimum pressure to detect a finger (default is 12).
-.It Va debug.cyapa_scroll_wait_ms
-Milliseconds to wait before starting to scroll (default is 50).
-.It Va debug.cyapa_scroll_stick_ms
-Milliseconds to prevent cursor move on single finger after scroll (default is 150).
-.It Va debug.cyapa_rest_ms
-Milliseconds to detect resting cursor (default is 50).
+Minimum pressure to detect a finger, the default is 12.
+.It Va debug.cyapa_enable_tapclick
+Controls tap to click.
+Possible values:
+.Pp
+.Bl -tag
+.It 0
+Tap to click is disabled.
+This is the default value.
+.It 1
+Tap to click always generates a left mouse button event.
+.It 2
+Tap to click generates left mouse button event if the left 2/3rds of the pad
+are tapped and a right mouse button event otherwise.
+.It 3
+Tap to click generates mouse button events like if the physical button was pressed (see
+.Sx DESCRIPTION
+above).
+.El
+.Pp
+.It Va debug.cyapa_tapclick_min_ticks
+Minimum tap duration in ticks to create a click, the default is 1.
+.It Va debug.cyapa_tapclick_max_ticks
+Maximum tap duration in ticks to create a click, the default is 8.
+.It Va debug.cyapa_move_min_ticks
+Minimum ticks before cursor movement occurs, the default is 4.
+.It Va debug.cyapa_scroll_wait_ticks
+Ticks to wait before starting to scroll, the default is 5.
+.It Va debug.cyapa_scroll_stick_ticks
+Ticks while preventing cursor movement on single finger after scroll, the default is 15.
 .It Va debug.cyapa_thumbarea_percent
-Size of bottom thumb area in percent (default is 15).
+Size of bottom thumb area in percent, the default is 15.
 .It Va debug.cyapa_debug
-Setting this to a non-zero enables debug output to console and syslog.
+Setting this to a non-zero enables debug output to console and syslog, the default is 0.
 .It Va debug.cyapa_reset
 Reinitialize the device.
 .El
@@ -133,6 +156,18 @@ file:
 If you prefer no vertical scrolling support also add
 .Pp
 .Dl moused_flags="-l0"
+.Pp
+to
+.Xr rc.conf 5 .
+.Pp
+To enable tap to click, so that middle mouse button events
+are only emitted if the physical button is pressed, and to disable
+the thumb area, add the following lines to the
+.Xr sysctl.conf 5
+file:
+.Pp
+.Dl debug.cyapa_thumbarea_percent=0
+.Dl debug.cyapa_enable_tapclick=2
 .Sh SEE ALSO
 .Xr ig4 4 ,
 .Xr moused 4 ,
@@ -145,7 +180,7 @@ The original
 driver was written for DragonFly BSD by
 .An Matthew Dillon .
 .Pp
-It has been ported, changed and enhanced for
+It has been ported, modified and enhanced for
 .Fx
 by
 .An Michael Gmelin Aq Mt freebsd@grem.de .
