@@ -166,7 +166,6 @@ struct cyapa_softc {
 	short	track_y;
 	short	track_z;
 	int	track_z_ticks;
-	int	last_move_ticks;
 	uint16_t track_but;
 	char 	track_id;		/* first finger id */
 	int	track_nfingers;
@@ -204,7 +203,7 @@ struct cyapa_softc {
 #define CYPOLL_SHUTDOWN	0x0001
 
 static void cyapa_poll_thread(void *arg);
-static int cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs);
+static int cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs, int freq);
 static void cyapa_set_power_mode(struct cyapa_softc *sc, int mode);
 
 static int fifo_empty(struct cyapa_fifo *fifo);
@@ -1239,7 +1238,7 @@ cyapa_poll_thread(void *arg)
 					    NULL, 0,
 					    (void *)&regs, sizeof(regs), NULL);
 			if (error == 0) {
-				isidle = cyapa_raw_input(sc, &regs);
+				isidle = cyapa_raw_input(sc, &regs, freq);
 			}
 
 			/*
@@ -1292,7 +1291,7 @@ cyapa_poll_thread(void *arg)
 
 static
 int
-cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs)
+cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs, int freq)
 {
 	int nfingers;
 	int afingers;	/* actual fingers after culling */
@@ -1487,7 +1486,7 @@ cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs)
 		y = CYAPA_TOUCH_Y(regs, i);
 		click_x = x;
 		click_y = y;
-		if (sc->track_x != -1 && sc->track_y < thumbarea_begin && (afingers > 1 || (sc->poll_ticks - sc->finger1_ticks) >= cyapa_move_min_ticks)) {
+		if (sc->track_x != -1 && sc->track_y < thumbarea_begin && (afingers > 1 || (sc->poll_ticks - sc->finger1_ticks) >= cyapa_move_min_ticks || freq < cyapa_norm_freq)) {
 			sc->delta_x += x - sc->track_x;
 			sc->delta_y -= y - sc->track_y;
 			if (sc->delta_x > sc->cap_resx)
@@ -1511,12 +1510,6 @@ cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs)
 		}
 		sc->track_x = x;
 		sc->track_y = y;
-
-		/*if (CYAPA_TOUCH_P(regs, i) > 35 && abs(sc->delta_x) < 10 && abs(sc->delta_y) < 10) {
-		    sc->delta_x = sc->delta_y = 0;
-		} else {
-			sc->last_move_ticks = sc->poll_ticks;
-		}*/
 	}
 
 	/*
