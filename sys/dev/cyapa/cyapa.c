@@ -241,7 +241,7 @@ SYSCTL_INT(_debug, OID_AUTO, cyapa_tapclick_max_ticks, CTLFLAG_RW,
 static int cyapa_move_min_ticks = 4;
 SYSCTL_INT(_debug, OID_AUTO, cyapa_move_min_ticks, CTLFLAG_RW,
 		&cyapa_move_min_ticks, 0, "Minimum ticks before cursor position is changed");
-static int cyapa_scroll_wait_ticks = 5;
+static int cyapa_scroll_wait_ticks = 0;
 SYSCTL_INT(_debug, OID_AUTO, cyapa_scroll_wait_ticks, CTLFLAG_RW,
 		&cyapa_scroll_wait_ticks, 0, "Wait N ticks before starting to scroll");
 static int cyapa_scroll_stick_ticks = 15;
