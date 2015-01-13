@@ -406,8 +406,8 @@ static int isl_read_sensor(device_t dev, int addr, uint8_t cmd_mask)
 	    device_printf(dev, "Couldn't read first byte after command %d\n", cmd_mask);
 	    return -1;
 	}
-	
-	ret = rbyte << 8;
+
+	ret = rbyte;
 	
 	if (smbus_trans(bus, addr, REG_DATA2,
 			 SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
@@ -416,7 +416,7 @@ static int isl_read_sensor(device_t dev, int addr, uint8_t cmd_mask)
 	    return -1;
 	}
 
-	ret += rbyte;
+	ret += rbyte << 8;
 
 	return ret;
 }
