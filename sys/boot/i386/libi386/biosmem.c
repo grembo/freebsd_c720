@@ -32,13 +32,25 @@ __FBSDID("$FreeBSD: head/sys/boot/i386/libi386/biosmem.c 226746 2011-10-25 19:45
  */
 #include <stand.h>
 #include <machine/pc/bios.h>
+#include "bootstrap.h"
 #include "libi386.h"
 #include "btxv86.h"
 
 vm_offset_t	memtop, memtop_copyin, high_heap_base;
 uint32_t	bios_basemem, bios_extmem, high_heap_size;
 
-static struct bios_smap smap;
+static struct bios_smap_xattr smap;
+
+/*
+ * Used to track which method was used to set BIOS memory
+ * regions.
+ */
+uint8_t b_bios_probed = 0;
+#define	B_BASEMEM_E820 0x1
+#define	B_BASEMEM_12 0x2
+#define	B_EXTMEM_E820 0x4
+#define	B_EXTMEM_E801 0x8
+#define	B_EXTMEM_8800 0x10
 
 /*
  * The minimum amount of memory to reserve in bios_extmem for the heap.
@@ -49,7 +61,6 @@ void
 bios_getmem(void)
 {
     uint64_t size;
-    int64_t v;
 
     /* Parse system memory map */
     v86.ebx = 0;
@@ -57,7 +68,7 @@ bios_getmem(void)
 	v86.ctl = V86_FLAGS;
 	v86.addr = 0x15;		/* int 0x15 function 0xe820*/
 	v86.eax = 0xe820;
-	v86.ecx = sizeof(struct bios_smap);
+	v86.ecx = sizeof(struct bios_smap_xattr);
 	v86.edx = SMAP_SIG;
 	v86.es = VTOPSEG(&smap);
 	v86.edi = VTOPOFF(&smap);
@@ -66,11 +77,16 @@ bios_getmem(void)
 	    break;
 	/* look for a low-memory segment that's large enough */
 	if ((smap.type == SMAP_TYPE_MEMORY) && (smap.base == 0) &&
-	    (smap.length >= (512 * 1024)))
+	    (smap.length >= (512 * 1024))) {
 	    bios_basemem = smap.length;
+	    b_bios_probed |= B_BASEMEM_E820;
+	}
 	/* look for the first segment in 'extended' memory */
-	if ((smap.type == SMAP_TYPE_MEMORY) && (smap.base == 0x100000)) {
+	/* we need it to be at least 32MiB or -HEAD won't load */
+	if ((smap.type == SMAP_TYPE_MEMORY) && (smap.base == 0x100000) &&
+	    (smap.length >= (32 * 1024 * 1024))) {
 	    bios_extmem = smap.length;
+	    b_bios_probed |= B_EXTMEM_E820;
 	}
 
 	/*
@@ -101,6 +117,7 @@ bios_getmem(void)
 	v86int();
 	
 	bios_basemem = (v86.eax & 0xffff) * 1024;
+	b_bios_probed |= B_BASEMEM_12;
     }
 
     /* Fall back through several compatibility functions for extended memory */
@@ -110,11 +127,29 @@ bios_getmem(void)
 	v86.eax = 0xe801;
 	v86int();
 	if (!(V86_CY(v86.efl))) {
-	    v = ((v86.ecx & 0xffff) +
-	        ((int64_t)(v86.edx & 0xffff) * 64)) * 1024;
-	    if (v > 0x40000000)
-	        v = 0x40000000;
-            bios_extmem = v;
+	    /*
+	     * Clear high_heap; it may end up overlapping
+	     * with the segment we're determining here.
+	     * Let the default "steal stuff from top of
+	     * bios_extmem" code below pick up on it.
+	     */
+	    high_heap_size = 0;
+	    high_heap_base = 0;
+	    /*
+	     * cx is the number of 1KiB blocks between 1..16MiB.
+	     * It can only be up to 0x3c00; if it's smaller then
+	     * there's a PC AT memory hole so we can't treat
+	     * it as contiguous.
+	     */
+	    bios_extmem = (v86.ecx & 0xffff) * 1024;
+	    if (bios_extmem == (1024 * 0x3c00))
+	        bios_extmem += (v86.edx & 0xffff) * 64 * 1024;
+
+	    /* truncate bios_extmem */
+	    if (bios_extmem > 0x3ff00000)
+	        bios_extmem = 0x3ff00000;
+
+	    b_bios_probed |= B_EXTMEM_E801;
 	}
     }
     if (bios_extmem == 0) {
@@ -123,14 +158,12 @@ bios_getmem(void)
 	v86.eax = 0x8800;
 	v86int();
 	bios_extmem = (v86.eax & 0xffff) * 1024;
+	b_bios_probed |= B_EXTMEM_8800;
     }
 
     /* Set memtop to actual top of memory */
-    memtop = memtop_copyin = 0x100000 + bios_extmem;	/* XXX ignored */
-    memtop = memtop_copyin = 64 * 1024 * 1024;
-    high_heap_size = HEAP_MIN;
-    high_heap_base = memtop - HEAP_MIN;
-    
+    memtop = memtop_copyin = 0x100000 + bios_extmem;
+
     /*
      * If we have extended memory and did not find a suitable heap
      * region in the SMAP, use the last 3MB of 'extended' memory as a
@@ -141,3 +174,30 @@ bios_getmem(void)
 	high_heap_base = memtop - HEAP_MIN;
     }
 }    
+
+static int
+command_biosmem(int argc, char *argv[])
+{
+
+	printf("bios_basemem: 0x%llx\n", (unsigned long long) bios_basemem);
+	printf("bios_extmem: 0x%llx\n", (unsigned long long) bios_extmem);
+	printf("memtop: 0x%llx\n", (unsigned long long) memtop);
+	printf("high_heap_base: 0x%llx\n", (unsigned long long) high_heap_base);
+	printf("high_heap_size: 0x%llx\n", (unsigned long long) high_heap_size);
+	printf("b_bios_probed: 0x%02x ", (int) b_bios_probed);
+	if (b_bios_probed & B_BASEMEM_E820)
+		printf(" B_BASEMEM_E820");
+	if (b_bios_probed & B_BASEMEM_12)
+		printf(" B_BASEMEM_12");
+	if (b_bios_probed & B_EXTMEM_E820)
+		printf(" B_EXTMEM_E820");
+	if (b_bios_probed & B_EXTMEM_E801)
+		printf(" B_EXTMEM_E801");
+	if (b_bios_probed & B_EXTMEM_8800)
+		printf(" B_EXTMEM_8800");
+	printf("\n");
+
+	return (CMD_OK);
+}
+
+COMMAND_SET(smap, "biosmem", "show BIOS memory setup", command_biosmem);
