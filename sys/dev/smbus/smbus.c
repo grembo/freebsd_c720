@@ -54,7 +54,7 @@ static int smbus_attach(device_t);
 static int smbus_detach(device_t);
 
 static device_t smbus_add_child(device_t parent, u_int order,
-				const char *name, int unit);
+		    const char *name, int unit);
 static void smbus_probe_device(device_t dev, u_char* addr);
 
 static device_method_t smbus_methods[] = {
@@ -65,7 +65,7 @@ static device_method_t smbus_methods[] = {
 
 	/* bus interface */
 	DEVMETHOD(bus_add_child,	smbus_add_child),
-	DEVMETHOD(bus_driver_added,     bus_generic_driver_added),
+	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
 
 	DEVMETHOD_END
 };
@@ -100,12 +100,11 @@ smbus_attach(device_t dev)
 
 	mtx_init(&sc->lock, device_get_nameunit(dev), "smbus", MTX_DEF);
 
-	device_add_child(dev, NULL, -1); /* XXX: device_get_unit(dev)); */
+	device_add_child(dev, NULL, -1);
 	for (addr = 16; addr < 112; ++addr) {
-	        sc->addrs[addr] = addr;
+		sc->addrs[addr] = addr;
 		smbus_probe_device(dev, &sc->addrs[addr]);
 	}
-	/*bus_generic_probe(dev);*/
 	bus_generic_attach(dev);
 
 	return (0);
@@ -133,7 +132,7 @@ smbus_generic_intr(device_t dev, u_char devaddr, char low, char high, int err)
 static void
 smbus_probe_device(device_t dev, u_char* addr)
 {
-        device_t child;
+	device_t child;
 	int error;
 	u_char cmd;
 	u_char buf[2];
@@ -158,7 +157,7 @@ smbus_add_child(device_t parent, u_int order, const char *name, int unit)
 	child = device_add_child_ordered(parent, order, NULL, unit);
 	device_probe_and_attach(child);
 
-	return child;
+	return (child);
 }
 
 MODULE_VERSION(smbus, SMBUS_MODVER);
