@@ -390,7 +390,7 @@ static int isl_read_sensor(device_t dev, int addr, uint8_t cmd_mask)
 	}
 
 	cmd = (rbyte & 0x1f) | cmd_mask;
-	device_printf(dev, "Sending command %d\n", cmd);
+	//device_printf(dev, "Sending command %d\n", cmd);
 	if (smbus_trans(bus, addr, REG_CMD1,
 			SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
 			&cmd, sizeof(cmd), NULL, 0, NULL)) {
