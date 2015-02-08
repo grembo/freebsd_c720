@@ -121,14 +121,8 @@ smb_attach(device_t dev)
 	sc->sc_dev = dev;
 	sc->sc_unit = unit;
 
-/*	if (unit & 0x0400) {
-	    sc->sc_devnode = make_dev(&smb_cdevsw, unit,
-	            UID_ROOT, GID_WHEEL, 0600,
-	                    "smb%d-%02x", unit >> 11, unit & 1023);
-        } else { */
-            sc->sc_devnode = make_dev(&smb_cdevsw, unit,
-	            UID_ROOT, GID_WHEEL, 0600, "smb%d", unit);
-/*        } */
+	sc->sc_devnode = make_dev(&smb_cdevsw, unit, UID_ROOT, GID_WHEEL,
+	    0600, "smb%d", unit);
 	sc->sc_devnode->si_drv1 = sc;
 	mtx_init(&sc->sc_lock, device_get_nameunit(dev), NULL, MTX_DEF);
 
@@ -178,7 +172,8 @@ smbclose(struct cdev *dev, int flags, int fmt, struct thread *td)
 }
 
 static int
-smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *td)
+smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags,
+    struct thread *td)
 {
 	char buf[SMB_MAXBLOCKSIZE];
 	device_t parent;
@@ -194,9 +189,8 @@ smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 	 * slave.
 	 */
 	unit = sc->sc_unit;
-	if (unit & 0x0400) {
-	        s->slave = unit & 1023;
-        }
+	if (unit & 0x0400)
+		s->slave = unit & 1023;
 
 	parent = device_get_parent(smbdev);
 
@@ -206,48 +200,46 @@ smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 
 	/* Allocate the bus. */
 	if ((error = smbus_request_bus(parent, smbdev,
-			(flags & O_NONBLOCK) ? SMB_DONTWAIT : (SMB_WAIT | SMB_INTR))))
+		    (flags & O_NONBLOCK) ? SMB_DONTWAIT :
+			(SMB_WAIT | SMB_INTR))))
 		return (error);
 
 	switch (cmd) {
 	case SMB_QUICK_WRITE:
-		error = smbus_error(smbus_quick(parent, s->slave, SMB_QWRITE));
+		error = smbus_error(smbus_quick(parent, s->slave,
+		    SMB_QWRITE));
 		break;
-
 	case SMB_QUICK_READ:
-		error = smbus_error(smbus_quick(parent, s->slave, SMB_QREAD));
+		error = smbus_error(smbus_quick(parent, s->slave,
+		    SMB_QREAD));
 		break;
-
 	case SMB_SENDB:
-		error = smbus_error(smbus_sendb(parent, s->slave, s->cmd));
+		error = smbus_error(smbus_sendb(parent, s->slave,
+		    s->cmd));
 		break;
-
 	case SMB_RECVB:
-		error = smbus_error(smbus_recvb(parent, s->slave, &s->cmd));
+		error = smbus_error(smbus_recvb(parent, s->slave,
+		    &s->cmd));
 		break;
-
 	case SMB_WRITEB:
 		error = smbus_error(smbus_writeb(parent, s->slave, s->cmd,
-						s->wdata.byte));
+		    s->wdata.byte));
 		break;
-
 	case SMB_WRITEW:
 		error = smbus_error(smbus_writew(parent, s->slave,
-						s->cmd, s->wdata.word));
+		    s->cmd, s->wdata.word));
 		break;
-
 	case SMB_READB:
 		error = smbus_error(smbus_readb(parent, s->slave, s->cmd,
-		        &s->rdata.byte));
+		    &s->rdata.byte));
 		if (s->rbuf && s->rcount >= 1) {
 			error = copyout(&s->rdata.byte, s->rbuf, 1);
 			s->rcount = 1;
 		}
 		break;
-
 	case SMB_READW:
 		error = smbus_error(smbus_readw(parent, s->slave, s->cmd,
-						&s->rdata.word));
+		    &s->rdata.word));
 		if (s->rbuf && s->rcount >= 2) {
 			buf[0] = (u_char)s->rdata.word;
 			buf[1] = (u_char)(s->rdata.word >> 8);
@@ -255,10 +247,9 @@ smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 			s->rcount = 2;
 		}
 		break;
-
 	case SMB_PCALL:
 		error = smbus_error(smbus_pcall(parent, s->slave, s->cmd,
-						s->wdata.word, &s->rdata.word));
+		    s->wdata.word, &s->rdata.word));
 		if (s->rbuf && s->rcount >= 2) {
 			char buf[2];
 			buf[0] = (u_char)s->rdata.word;
@@ -266,9 +257,7 @@ smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 			error = copyout(buf, s->rbuf, 2);
 			s->rcount = 2;
 		}
-
 		break;
-
 	case SMB_BWRITE:
 		if (s->wcount < 0)
 			s->wcount = 0;
@@ -279,9 +268,8 @@ smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 		if (error)
 			break;
 		error = smbus_error(smbus_bwrite(parent, s->slave, s->cmd,
-						 s->wcount, buf));
+		    s->wcount, buf));
 		break;
-
 #if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || defined(COMPAT_FREEBSD6)
 	case SMB_OLD_BREAD:
 #endif
@@ -298,7 +286,6 @@ smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 			s->rcount = bcount;
 		error = copyout(buf, s->rbuf, s->rcount);
 		break;
-
 	case SMB_TRANS:
 		if (s->rcount < 0)
 			s->rcount = 0;
@@ -312,19 +299,16 @@ smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 			error = copyin(s->wbuf, buf, s->wcount);
 		if (error)
 			break;
-		error = smbus_trans(parent, s->slave, s->cmd, s->op,
-				    buf, s->wcount, buf, s->rcount, &s->rcount);
+		error = smbus_trans(parent, s->slave, s->cmd, s->op, buf,
+		    s->wcount, buf, s->rcount, &s->rcount);
 		error = smbus_error(error);
 		if (error == 0)
 			error = copyout(buf, s->rbuf, s->rcount);
 		break;
-                                		
 	default:
 		error = ENOTTY;
 	}
-
 	smbus_release_bus(parent, smbdev);
-
 	return (error);
 }
 
