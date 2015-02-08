@@ -484,40 +484,40 @@ ig4iic_attach(ig4iic_softc_t *sc)
 	mtx_lock(&sc->mutex);
 
 	v = reg_read(sc, IG4_REG_COMP_TYPE);
-	printf("type %08x", v);
+	device_printf(sc->dev, "type %08x", v);
 	v = reg_read(sc, IG4_REG_COMP_PARAM1);
-	printf(" params %08x", v);
+	device_printf(sc->dev, " params %08x", v);
 	v = reg_read(sc, IG4_REG_GENERAL);
-	printf(" general %08x", v);
+	device_printf(sc->dev, " general %08x", v);
 	if ((v & IG4_GENERAL_SWMODE) == 0) {
 		v |= IG4_GENERAL_SWMODE;
 		reg_write(sc, IG4_REG_GENERAL, v);
 		v = reg_read(sc, IG4_REG_GENERAL);
-		printf(" (updated %08x)", v);
+		device_printf(sc->dev, " (updated %08x)", v);
 	}
 
 	v = reg_read(sc, IG4_REG_SW_LTR_VALUE);
-	printf(" swltr %08x", v);
+	device_printf(sc->dev, " swltr %08x", v);
 	v = reg_read(sc, IG4_REG_AUTO_LTR_VALUE);
-	printf(" autoltr %08x", v);
+	device_printf(sc->dev, " autoltr %08x", v);
 
 	v = reg_read(sc, IG4_REG_COMP_VER);
-	printf(" version %08x\n", v);
+	device_printf(sc->dev, " version %08x\n", v);
 	if (v != IG4_COMP_VER) {
 		error = ENXIO;
 		goto done;
 	}
 #if 1
 	v = reg_read(sc, IG4_REG_SS_SCL_HCNT);
-	printf("SS_SCL_HCNT=%08x", v);
+	device_printf(sc->dev, "SS_SCL_HCNT=%08x", v);
 	v = reg_read(sc, IG4_REG_SS_SCL_LCNT);
-	printf(" LCNT=%08x", v);
+	device_printf(sc->dev, " LCNT=%08x", v);
 	v = reg_read(sc, IG4_REG_FS_SCL_HCNT);
-	printf(" FS_SCL_HCNT=%08x", v);
+	device_printf(sc->dev, " FS_SCL_HCNT=%08x", v);
 	v = reg_read(sc, IG4_REG_FS_SCL_LCNT);
-	printf(" LCNT=%08x\n", v);
+	device_printf(sc->dev, " LCNT=%08x\n", v);
 	v = reg_read(sc, IG4_REG_SDA_HOLD);
-	printf("HOLD        %08x\n", v);
+	device_printf(sc->dev, "HOLD        %08x\n", v);
 
 	v = reg_read(sc, IG4_REG_SS_SCL_HCNT);
 	reg_write(sc, IG4_REG_FS_SCL_HCNT, v);
@@ -611,6 +611,8 @@ ig4iic_start(void *xdev)
 
 	sc = device_get_softc(dev);
 
+	config_intrhook_disestablish(&sc->enum_hook);
+
 	/* Attach us to the smbus */
 	error = bus_generic_attach(sc->dev);
 	mtx_lock(&sc->mutex);
@@ -623,7 +625,6 @@ ig4iic_start(void *xdev)
 
 done:
 	mtx_unlock(&sc->mutex);
-	config_intrhook_disestablish(&sc->enum_hook);
 }
 
 
