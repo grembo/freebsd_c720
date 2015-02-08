@@ -45,17 +45,49 @@ static struct bios_smap_xattr smap;
  * Used to track which method was used to set BIOS memory
  * regions.
  */
-uint8_t b_bios_probed = 0;
-#define	B_BASEMEM_E820 0x1
-#define	B_BASEMEM_12 0x2
-#define	B_EXTMEM_E820 0x4
-#define	B_EXTMEM_E801 0x8
-#define	B_EXTMEM_8800 0x10
+static uint8_t b_bios_probed;
+#define	B_BASEMEM_E820	0x1
+#define	B_BASEMEM_12	0x2
+#define	B_EXTMEM_E820	0x4
+#define	B_EXTMEM_E801	0x8
+#define	B_EXTMEM_8800	0x10
 
 /*
  * The minimum amount of memory to reserve in bios_extmem for the heap.
  */
 #define	HEAP_MIN	(3 * 1024 * 1024)
+
+/*
+ * Products in this list need quirks to detect
+ * memory correctly. You need both maker and product as
+ * reported by smbios.
+ */
+#define BQ_DISTRUST_E820_EXTMEM	0x1	/* e820 might not return useful
+					   extended memory */
+struct bios_getmem_quirks {
+    const char* bios_vendor;
+    const char*	maker;
+    const char*	product;
+    int		quirk;
+};
+
+static struct bios_getmem_quirks quirks[] = {
+    {"coreboot", "Acer", "Peppy", BQ_DISTRUST_E820_EXTMEM},
+    {NULL, NULL, NULL, 0}
+};
+
+static int
+bios_getquirks(void)
+{
+    int i;
+
+    for (i=0; quirks[i].quirk != 0; ++i)
+	if (smbios_match(quirks[i].bios_vendor, quirks[i].maker,
+	    quirks[i].product))
+	    return (1);
+
+    return (0);
+}
 
 void
 bios_getmem(void)
@@ -84,7 +116,8 @@ bios_getmem(void)
 	/* look for the first segment in 'extended' memory */
 	/* we need it to be at least 32MiB or -HEAD won't load */
 	if ((smap.type == SMAP_TYPE_MEMORY) && (smap.base == 0x100000) &&
-	    (smap.length >= (32 * 1024 * 1024))) {
+	    (smap.length >= (32 * 1024 * 1024) ||
+	     !(bios_getquirks() & BQ_DISTRUST_E820_EXTMEM))) {
 	    bios_extmem = smap.length;
 	    b_bios_probed |= B_EXTMEM_E820;
 	}
@@ -143,11 +176,11 @@ bios_getmem(void)
 	     */
 	    bios_extmem = (v86.ecx & 0xffff) * 1024;
 	    if (bios_extmem == (1024 * 0x3c00))
-	        bios_extmem += (v86.edx & 0xffff) * 64 * 1024;
+		bios_extmem += (v86.edx & 0xffff) * 64 * 1024;
 
 	    /* truncate bios_extmem */
 	    if (bios_extmem > 0x3ff00000)
-	        bios_extmem = 0x3ff00000;
+		bios_extmem = 0x3ff00000;
 
 	    b_bios_probed |= B_EXTMEM_E801;
 	}
@@ -173,18 +206,23 @@ bios_getmem(void)
 	high_heap_size = HEAP_MIN;
 	high_heap_base = memtop - HEAP_MIN;
     }
-}    
+}
 
 static int
 command_biosmem(int argc, char *argv[])
 {
+	int bq = bios_getquirks();
 
 	printf("bios_basemem: 0x%llx\n", (unsigned long long) bios_basemem);
 	printf("bios_extmem: 0x%llx\n", (unsigned long long) bios_extmem);
 	printf("memtop: 0x%llx\n", (unsigned long long) memtop);
 	printf("high_heap_base: 0x%llx\n", (unsigned long long) high_heap_base);
 	printf("high_heap_size: 0x%llx\n", (unsigned long long) high_heap_size);
-	printf("b_bios_probed: 0x%02x ", (int) b_bios_probed);
+	printf("bios_quirks: 0x%02x", bq);
+	if (bq & BQ_DISTRUST_E820_EXTMEM)
+		printf(" BQ_DISTRUST_E820_EXTMEM");
+	printf("\n");
+	printf("b_bios_probed: 0x%02x", (int) b_bios_probed);
 	if (b_bios_probed & B_BASEMEM_E820)
 		printf(" B_BASEMEM_E820");
 	if (b_bios_probed & B_BASEMEM_12)
