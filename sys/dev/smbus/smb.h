@@ -54,7 +54,7 @@ struct smbcmd {
 
 /*
  * SMBus spec 2.0 says block transfers may be at most 32 bytes.
- * We usse SMBus for i2c as well, make the size limit something more
+ * We use SMBus for i2c as well, make the size limit something more
  * reasonable.  Keep in mind that a char buf array is declared on the
  * kernel stack.
  */
