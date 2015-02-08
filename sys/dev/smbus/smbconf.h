@@ -124,8 +124,8 @@ extern devclass_t smbus_devclass;
 #define smbus_bread(bus,slave,cmd,count,buf) \
 	(SMBUS_BREAD(device_get_parent(bus), slave, cmd, count, buf))
 #define smbus_trans(bus,slave,cmd,op,wbuf,wcount,rbuf,rcount,actualp) \
-  (SMBUS_TRANS(device_get_parent(bus), slave, cmd, op,        \
-         wbuf, wcount, rbuf, rcount, actualp))
+	(SMBUS_TRANS(device_get_parent(bus), slave, cmd, op, \
+	wbuf, wcount, rbuf, rcount, actualp))
 
 #define SMBUS_MODVER	1
 #define SMBUS_MINVER	1
