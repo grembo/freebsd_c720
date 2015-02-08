@@ -165,4 +165,4 @@ METHOD int trans {
 	char    *rbuf;   
 	int     rcount;  
 	int     *actualp;
-}
+};
