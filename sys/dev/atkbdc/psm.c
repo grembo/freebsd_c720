@@ -1139,8 +1139,9 @@ psmidentify(driver_t *driver, device_t parent)
 #define	endprobe(v)	do {			\
 	if (bootverbose)			\
 		--verbose;			\
-        set_controller_command_byte(sc->kbdc,   \
-    KBD_AUX_CONTROL_BITS, KBD_DISABLE_AUX_PORT | KBD_DISABLE_AUX_INT); \
+	set_controller_command_byte(sc->kbdc,   \
+	    KBD_AUX_CONTROL_BITS, KBD_DISABLE_AUX_PORT | \
+	    KBD_DISABLE_AUX_INT); \
 	kbdc_lock(sc->kbdc, FALSE);		\
 	return (v);				\
 } while (0)
@@ -1216,8 +1217,11 @@ psmprobe(device_t dev)
 	}
 
 	/*
-	 * disable the keyboard port while probing the aux port, which must be
-	 * enabled during this routine
+	 * NOTE: We cannot mess with the keyboard port, do NOT disable it
+	 *       while we are probing the aux port during this routine.
+	 *       Disabling the keyboard port will break some things
+	 *       (Acer c720)... probably related to BIOS emulation of the
+	 *       i8042.
 	 */
 	if (!set_controller_command_byte(sc->kbdc,
 	    KBD_AUX_CONTROL_BITS,
@@ -1229,6 +1233,12 @@ psmprobe(device_t dev)
 		printf("psm%d: unable to set the command byte.\n", unit);
 		endprobe(ENXIO);
 	}
+
+	/*
+	 * NOTE: Linux doesn't send discrete aux port enablement commands,
+	 *       it is unclear whether this is needed or helps or hinders
+	 *       bios emulators.
+	 */
 	write_controller_command(sc->kbdc, KBDC_ENABLE_AUX_PORT);
 
 	/*

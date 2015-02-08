@@ -1207,7 +1207,11 @@ probe_keyboard(KBDC kbdc, int flags)
 		return ENXIO;
 	}
 
-	/* temporarily block data transmission from the keyboard */
+	/*
+	 * XXX block data transmission from the keyboard.  This can cause
+	 * the keyboard to stop sending keystrokes even when re-enabled
+	 * under certain circumstances if not followed by a full reset.
+	 */
 	write_controller_command(kbdc, KBDC_DISABLE_KBD_PORT);
 
 	/* flush any noise in the buffer */
@@ -1265,7 +1269,11 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 		return EIO;
 	}
 
-	/* temporarily block data transmission from the keyboard */
+	/*
+	 * XXX block data transmission from the keyboard.  This can cause
+	 * the keyboard to stop sending keystrokes even when re-enabled
+	 * under certain circumstances if not followed by a full reset.
+	 */
 	write_controller_command(kbdc, KBDC_DISABLE_KBD_PORT);
 
 	/* save the current controller command byte */
@@ -1398,7 +1406,7 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 #endif
 
 	/*
-         * Some keyboards require a SETLEDS command to be sent after
+	 * Some keyboards require a SETLEDS command to be sent after
 	 * the reset command before they will send keystrokes to us
 	 * (Acer C720).
 	 */
@@ -1418,8 +1426,8 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 		 * keyboard intr. 
 		 */
 		set_controller_command_byte(kbdc,
-		        KBD_KBD_CONTROL_BITS | KBD_TRANSLATION |
-		        KBD_OVERRIDE_KBD_LOCK, c);
+			KBD_KBD_CONTROL_BITS | KBD_TRANSLATION |
+			KBD_OVERRIDE_KBD_LOCK, c);
 		kbdc_lock(kbdc, FALSE);
 		printf("atkbd: unable to enable the keyboard port and intr.\n");
 		return EIO;
@@ -1441,6 +1449,11 @@ write_kbd(KBDC kbdc, int command, int data)
 	/* disable the keyboard and mouse interrupt */
 	s = spltty();
 #if 0
+	/*
+	 * XXX NOTE: We can't just disable the KBD port any more, even
+	 *           temporarily, without blowing up some BIOS emulations
+	 *           if not followed by a full reset.
+	 */
 	c = get_controller_command_byte(kbdc);
 	if ((c == -1) 
 	    || !set_controller_command_byte(kbdc, 
