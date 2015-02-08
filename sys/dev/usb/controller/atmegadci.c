@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/atmegadci.c 265949 2014-05-13 13:46:38Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/atmegadci.c 276701 2015-01-05 15:04:17Z hselasky $ */
 /*-
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
  *
@@ -88,7 +88,7 @@ static int atmegadci_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, atmegadci, CTLFLAG_RW, 0,
     "USB ATMEGA DCI");
-SYSCTL_INT(_hw_usb_atmegadci, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_atmegadci, OID_AUTO, debug, CTLFLAG_RWTUN,
     &atmegadci_debug, 0, "ATMEGA DCI debug level");
 #endif
 

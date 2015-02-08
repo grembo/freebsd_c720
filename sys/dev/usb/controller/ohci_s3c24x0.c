@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/dev/usb/controller/ohci_s3c24x0.c 272103 2014-09-25 11:38:26Z gavin $");
+__FBSDID("$FreeBSD: head/sys/dev/usb/controller/ohci_s3c24x0.c 276717 2015-01-05 20:22:18Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -84,6 +84,7 @@ ohci_s3c24x0_attach(device_t dev)
 	sc->sc_bus.parent = dev;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = OHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus, USB_GET_DMA_TAG(dev),

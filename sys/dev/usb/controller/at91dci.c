@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/at91dci.c 269604 2014-08-05 18:48:12Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/at91dci.c 276701 2015-01-05 15:04:17Z hselasky $ */
 /*-
  * Copyright (c) 2007-2008 Hans Petter Selasky. All rights reserved.
  *
@@ -98,7 +98,7 @@
 static int at91dcidebug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, at91dci, CTLFLAG_RW, 0, "USB at91dci");
-SYSCTL_INT(_hw_usb_at91dci, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_at91dci, OID_AUTO, debug, CTLFLAG_RWTUN,
     &at91dcidebug, 0, "at91dci debug level");
 #endif
 

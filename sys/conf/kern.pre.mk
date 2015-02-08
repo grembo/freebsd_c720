@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/kern.pre.mk 276496 2015-01-01 08:18:08Z imp $
+# $FreeBSD: head/sys/conf/kern.pre.mk 276770 2015-01-06 23:08:47Z imp $
 
 # Part of a unified Makefile for building kernels.  This part contains all
 # of the definitions that need to be before %BEFORE_DEPEND.
@@ -103,13 +103,7 @@ CFLAGS.gcc+=${CFLAGS_ARCH_PARAMS}
 WERROR?= -Werror
 
 # XXX LOCORE means "don't declare C stuff" not "for locore.s".
-ASM_CFLAGS= -x assembler-with-cpp -DLOCORE ${CFLAGS}
-
-.if ${COMPILER_TYPE} == "clang"
-CLANG_NO_IAS= -no-integrated-as
-.else
-GCC_MS_EXTENSIONS= -fms-extensions
-.endif
+ASM_CFLAGS= -x assembler-with-cpp -DLOCORE ${CFLAGS} ${ASM_CFLAGS.${.IMPSRC:T}} 
 
 .if defined(PROFLEVEL) && ${PROFLEVEL} >= 1
 CFLAGS+=	-DGPROF

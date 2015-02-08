@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
-# $FreeBSD: head/share/man/man4/Makefile 276526 2015-01-02 05:34:14Z scottl $
+# $FreeBSD: head/share/man/man4/Makefile 277219 2015-01-15 22:17:11Z jfv $
 
 .include <src.opts.mk>
 
@@ -86,6 +86,7 @@ MAN=	aac.4 \
 	cc_cdg.4 \
 	cc_chd.4 \
 	cc_cubic.4 \
+	cc_dctcp.4 \
 	cc_hd.4 \
 	cc_htcp.4 \
 	cc_newreno.4 \
@@ -130,6 +131,7 @@ MAN=	aac.4 \
 	esp.4 \
 	est.4 \
 	et.4 \
+	etherswitch.4 \
 	eventtimers.4 \
 	exca.4 \
 	fatm.4 \
@@ -218,6 +220,8 @@ MAN=	aac.4 \
 	iwnfw.4 \
 	ixgb.4 \
 	ixgbe.4 \
+	ixl.4 \
+	ixlv.4 \
 	jme.4 \
 	joy.4 \
 	kbdmux.4 \
@@ -668,6 +672,8 @@ MLINKS+=ixgb.4 if_ixgb.4
 MLINKS+=ixgbe.4 ix.4
 MLINKS+=ixgbe.4 if_ix.4
 MLINKS+=ixgbe.4 if_ixgbe.4
+MLINKS+=ixl.4 if_ixl.4
+MLINKS+=ixlv.4 if_ixlv.4
 MLINKS+=jme.4 if_jme.4
 MLINKS+=kue.4 if_kue.4
 MLINKS+=lagg.4 trunk.4

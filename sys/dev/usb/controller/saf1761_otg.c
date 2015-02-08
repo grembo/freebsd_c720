@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/saf1761_otg.c 275507 2014-12-05 12:07:53Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/saf1761_otg.c 276701 2015-01-05 15:04:17Z hselasky $ */
 /*-
  * Copyright (c) 2014 Hans Petter Selasky <hselasky@FreeBSD.org>
  * All rights reserved.
@@ -100,9 +100,9 @@ static
 SYSCTL_NODE(_hw_usb, OID_AUTO, saf1761_otg, CTLFLAG_RW, 0,
     "USB SAF1761 DCI");
 
-SYSCTL_INT(_hw_usb_saf1761_otg, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_saf1761_otg, OID_AUTO, debug, CTLFLAG_RWTUN,
     &saf1761_otg_debug, 0, "SAF1761 DCI debug level");
-SYSCTL_INT(_hw_usb_saf1761_otg, OID_AUTO, forcefs, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_saf1761_otg, OID_AUTO, forcefs, CTLFLAG_RWTUN,
     &saf1761_otg_forcefs, 0, "SAF1761 DCI force FULL speed");
 #endif
 

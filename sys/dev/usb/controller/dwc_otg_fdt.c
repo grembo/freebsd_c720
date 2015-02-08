@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/dev/usb/controller/dwc_otg_fdt.c 266394 2014-05-18 09:13:29Z hselasky $");
+__FBSDID("$FreeBSD: head/sys/dev/usb/controller/dwc_otg_fdt.c 276717 2015-01-05 20:22:18Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -99,6 +99,7 @@ dwc_otg_attach(device_t dev)
 	sc->sc_otg.sc_bus.parent = dev;
 	sc->sc_otg.sc_bus.devices = sc->sc_otg.sc_devices;
 	sc->sc_otg.sc_bus.devices_max = DWC_OTG_MAX_DEVICES;
+	sc->sc_otg.sc_bus.dma_bits = 32;
 
 	/* get USB mode, if any */
 	if (OF_getprop(ofw_bus_get_node(dev), "dr_mode",

@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/dev/usb/controller/musb_otg_atmelarm.c 252912 2013-07-07 04:18:35Z gonzo $");
+__FBSDID("$FreeBSD: head/sys/dev/usb/controller/musb_otg_atmelarm.c 276717 2015-01-05 20:22:18Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -137,6 +137,7 @@ musbotg_attach(device_t dev)
 	sc->sc_otg.sc_bus.parent = dev;
 	sc->sc_otg.sc_bus.devices = sc->sc_otg.sc_devices;
 	sc->sc_otg.sc_bus.devices_max = MUSB2_MAX_DEVICES;
+	sc->sc_otg.sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_otg.sc_bus,

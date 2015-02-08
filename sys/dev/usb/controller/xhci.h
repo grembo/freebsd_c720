@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/xhci.h 276407 2014-12-30 09:20:29Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/xhci.h 276799 2015-01-08 00:12:54Z hselasky $ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -321,7 +321,7 @@ struct xhci_dev_endpoint_trbs {
 };
 
 #if (USB_PAGE_SIZE < 4096)
-#error "The XHCI driver needs a pagesize above 4K"
+#error "The XHCI driver needs a pagesize above or equal to 4K"
 #endif
 
 /* Define the maximum payload which we will handle in a single TRB */

@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/dev/usb/controller/at91dci_fdt.c 269604 2014-08-05 18:48:12Z hselasky $");
+__FBSDID("$FreeBSD: head/sys/dev/usb/controller/at91dci_fdt.c 276717 2015-01-05 20:22:18Z hselasky $");
 
 /*-
  * Copyright (c) 2007-2008 Hans Petter Selasky. All rights reserved.
@@ -162,6 +162,7 @@ at91_udp_attach(device_t dev)
 	sc->sc_dci.sc_bus.parent = dev;
 	sc->sc_dci.sc_bus.devices = sc->sc_dci.sc_devices;
 	sc->sc_dci.sc_bus.devices_max = AT91_MAX_DEVICES;
+	sc->sc_dci.sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_dci.sc_bus,

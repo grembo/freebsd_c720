@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/dev/usb/controller/ehci_ixp4xx.c 228483 2011-12-14 00:28:54Z hselasky $");
+__FBSDID("$FreeBSD: head/sys/dev/usb/controller/ehci_ixp4xx.c 276717 2015-01-05 20:22:18Z hselasky $");
 
 #include "opt_bus.h"
 
@@ -107,6 +107,7 @@ ehci_ixp_attach(device_t self)
 	sc->sc_bus.parent = self;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = EHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus,

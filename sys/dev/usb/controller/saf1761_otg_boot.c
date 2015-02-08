@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/saf1761_otg_boot.c 266883 2014-05-30 13:42:11Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/saf1761_otg_boot.c 276717 2015-01-05 20:22:18Z hselasky $ */
 /*-
  * Copyright (c) 2014 Hans Petter Selasky <hselasky@FreeBSD.org>
  * All rights reserved.
@@ -85,6 +85,7 @@ saf1761_otg_fdt_attach(device_t dev)
 	sc->sc_bus.parent = dev;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = SOTG_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus, USB_GET_DMA_TAG(dev), NULL))

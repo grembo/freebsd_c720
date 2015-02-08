@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD: head/sys/conf/files.powerpc 275779 2014-12-14 22:41:08Z rpaulo $
+# $FreeBSD: head/sys/conf/files.powerpc 277166 2015-01-14 07:01:21Z jhibbits $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -202,6 +202,7 @@ powerpc/powerpc/pic_if.m	standard
 powerpc/powerpc/pmap_dispatch.c	standard
 powerpc/powerpc/platform.c	standard
 powerpc/powerpc/platform_if.m	standard
+powerpc/powerpc/ptrace_machdep.c	standard
 powerpc/powerpc/sc_machdep.c	optional	sc
 powerpc/powerpc/setjmp.S	standard
 powerpc/powerpc/sigcode32.S	optional	powerpc | compat_freebsd32

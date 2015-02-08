@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/uss820dci.c 269586 2014-08-05 13:36:26Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/uss820dci.c 276701 2015-01-05 15:04:17Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky <hselasky@FreeBSD.org>
  * All rights reserved.
@@ -89,7 +89,7 @@ static int uss820dcidebug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, uss820dci, CTLFLAG_RW, 0,
     "USB uss820dci");
-SYSCTL_INT(_hw_usb_uss820dci, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_uss820dci, OID_AUTO, debug, CTLFLAG_RWTUN,
     &uss820dcidebug, 0, "uss820dci debug level");
 #endif
 

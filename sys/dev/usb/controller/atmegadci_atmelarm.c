@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/dev/usb/controller/atmegadci_atmelarm.c 228483 2011-12-14 00:28:54Z hselasky $");
+__FBSDID("$FreeBSD: head/sys/dev/usb/controller/atmegadci_atmelarm.c 276717 2015-01-05 20:22:18Z hselasky $");
 
 /*-
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
@@ -101,6 +101,7 @@ atmegadci_attach(device_t dev)
 	sc->sc_otg.sc_bus.parent = dev;
 	sc->sc_otg.sc_bus.devices = sc->sc_otg.sc_devices;
 	sc->sc_otg.sc_bus.devices_max = ATMEGA_MAX_DEVICES;
+	sc->sc_otg.sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_otg.sc_bus,

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/dev/usb/controller/ohci_pci.c 275010 2014-11-25 06:15:00Z jhibbits $");
+__FBSDID("$FreeBSD: head/sys/dev/usb/controller/ohci_pci.c 276717 2015-01-05 20:22:18Z hselasky $");
 
 /*
  * USB Open Host Controller driver.
@@ -213,6 +213,7 @@ ohci_pci_attach(device_t self)
 	sc->sc_bus.parent = self;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = OHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus, USB_GET_DMA_TAG(self),

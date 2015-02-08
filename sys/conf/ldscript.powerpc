@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/conf/ldscript.powerpc 272888 2014-10-10 06:24:09Z bapt $ */
+/* $FreeBSD: head/sys/conf/ldscript.powerpc 277334 2015-01-18 18:32:43Z nwhitehorn $ */
 
 OUTPUT_FORMAT("elf32-powerpc-freebsd", "elf32-powerpc-freebsd",
 	      "elf32-powerpc-freebsd")
@@ -11,6 +11,7 @@ SECTIONS
   /* Read-only sections, merged into text segment: */
 
   . = kernbase + SIZEOF_HEADERS;
+  PROVIDE (begin = . - SIZEOF_HEADERS);
 
   .text      :
   {
