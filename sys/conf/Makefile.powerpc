@@ -1,7 +1,7 @@
 # Makefile.powerpc -- with config changes.
 # Copyright 1990 W. Jolitz
 #	from: @(#)Makefile.i386	7.1 5/10/91
-# $FreeBSD: head/sys/conf/Makefile.powerpc 261492 2014-02-04 18:24:25Z imp $
+# $FreeBSD: head/sys/conf/Makefile.powerpc 277990 2015-01-31 19:16:51Z nwhitehorn $
 #
 # Makefile for FreeBSD
 #
@@ -36,6 +36,11 @@ LDSCRIPT_NAME?= ldscript.${MACHINE_ARCH}
 INCLUDES+= -I$S/contrib/libfdt
 
 CFLAGS+= -msoft-float -Wa,-many
+
+.if ${MACHINE_ARCH} == "powerpc64"
+CFLAGS+= -fPIC
+LDFLAGS+= -pie
+.endif
 
 .if !empty(DDB_ENABLED)
 CFLAGS+=	-fno-omit-frame-pointer

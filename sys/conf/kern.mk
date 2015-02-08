@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/kern.mk 276950 2015-01-10 23:43:37Z imp $
+# $FreeBSD: head/sys/conf/kern.mk 278229 2015-02-05 01:36:53Z peter $
 
 #
 # Warning flags for compiling the kernel and components of the kernel:
@@ -23,6 +23,7 @@ NO_WSHIFT_COUNT_OVERFLOW=	-Wno-shift-count-overflow
 NO_WSELF_ASSIGN=		-Wno-self-assign
 NO_WUNNEEDED_INTERNAL_DECL=	-Wno-unneeded-internal-declaration
 NO_WSOMETIMES_UNINITIALIZED=	-Wno-error-sometimes-uninitialized
+NO_WCAST_QUAL=			-Wno-cast-qual
 # Several other warnings which might be useful in some cases, but not severe
 # enough to error out the whole kernel build.  Display them anyway, so there is
 # some incentive to fix them eventually.
@@ -155,6 +156,14 @@ INLINE_LIMIT?=	8000
 # assumption that the program is linked against libc.  Stop this.
 #
 CFLAGS+=	-ffreestanding
+
+#
+# The C standard leaves signed integer overflow behavior undefined.
+# gcc and clang opimizers take advantage of this.  The kernel makes
+# use of signed integer wraparound mechanics so we need the compiler
+# to treat it as a wraparound and not take shortcuts.
+# 
+CFLAGS+=	-fwrapv
 
 #
 # GCC SSP support

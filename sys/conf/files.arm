@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/files.arm 276638 2015-01-03 22:33:18Z ian $
+# $FreeBSD: head/sys/conf/files.arm 277835 2015-01-28 16:08:07Z br $
 arm/arm/autoconf.c		standard
 arm/arm/bcopy_page.S		standard
 arm/arm/bcopyinout.S		standard
@@ -70,6 +70,7 @@ crypto/des/des_enc.c		optional	crypto | ipsec | netsmb
 dev/fb/fb.c			optional	sc
 dev/fdt/fdt_arm_platform.c	optional	platform fdt
 dev/hwpmc/hwpmc_arm.c		optional	hwpmc
+dev/hwpmc/hwpmc_armv7.c		optional	hwpmc
 dev/kbd/kbd.c			optional	sc | vt
 dev/syscons/scgfbrndr.c		optional	sc
 dev/syscons/scterm-teken.c	optional	sc

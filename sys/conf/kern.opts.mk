@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/kern.opts.mk 274529 2014-11-14 21:10:45Z imp $
+# $FreeBSD: head/sys/conf/kern.opts.mk 277728 2015-01-26 07:15:49Z ngie $
 
 # Options set in the build system that affect the kernel somehow.
 
@@ -23,13 +23,18 @@
 # src tree.
 
 __DEFAULT_YES_OPTIONS = \
+    AUTOFS \
+    BHYVE \
     BLUETOOTH \
+    CCD \
     CDDL \
     CRYPT \
+    CUSE \
     FORMAT_EXTENSIONS \
     INET \
     INET6 \
     IPFILTER \
+    ISCSI \
     KERNEL_SYMBOLS \
     NETGRAPH \
     PF \
