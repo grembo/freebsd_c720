@@ -77,6 +77,10 @@ typedef struct atkbd_state {
 
 static void		atkbd_timeout(void *arg);
 static void		atkbd_shutdown_final(void *v);
+static int		atkbd_reset(KBDC kbdc, int flags, int c);
+
+#define HAS_QUIRK(p, q)		(((atkbdc_softc_t *)(p))->quirks & q)
+#define ALLOW_DISABLE_KBD(kbdc)	!HAS_QUIRK(kbdc, KBDC_QUIRK_KEEP_ACTIVATED)
 
 int
 atkbd_probe_unit(device_t dev, int irq, int flags)
@@ -431,7 +435,7 @@ atkbd_init(int unit, keyboard_t **kbdp, void *arg, int flags)
 	}
 	if (!KBD_IS_INITIALIZED(kbd) && !(flags & KB_CONF_PROBE_ONLY)) {
 		kbd->kb_config = flags & ~KB_CONF_PROBE_ONLY;
-		if (!KBD_HAS_DEVICE(kbd)
+		if (KBD_HAS_DEVICE(kbd)
 		    && init_keyboard(state->kbdc, &kbd->kb_type, kbd->kb_config)
 		    && (kbd->kb_config & KB_CONF_FAIL_IF_NO_KBD)) {
 			kbd_unregister(kbd);
@@ -443,7 +447,6 @@ atkbd_init(int unit, keyboard_t **kbdp, void *arg, int flags)
 		delay[0] = kbd->kb_delay1;
 		delay[1] = kbd->kb_delay2;
 		atkbd_ioctl(kbd, KDSETREPEAT, (caddr_t)delay);
-		KBD_FOUND_DEVICE(kbd);
 		KBD_INIT_DONE(kbd);
 	}
 	if (!KBD_IS_CONFIGURED(kbd)) {
@@ -1096,6 +1099,39 @@ atkbd_shutdown_final(void *v)
 #endif
 }
 
+static int
+atkbd_reset(KBDC kbdc, int flags, int c)
+{
+	/* reset keyboard hardware */
+	if (!(flags & KB_CONF_NO_RESET) && !reset_kbd(kbdc)) {
+		/*
+		 * KEYBOARD ERROR
+		 * Keyboard reset may fail either because the keyboard
+		 * doen't exist, or because the keyboard doesn't pass
+		 * the self-test, or the keyboard controller on the
+		 * motherboard and the keyboard somehow fail to shake hands.
+		 * It is just possible, particularly in the last case,
+		 * that the keyboard controller may be left in a hung state.
+		 * test_controller() and test_kbd_port() appear to bring
+		 * the keyboard controller back (I don't know why and how,
+		 * though.)
+		 */
+		empty_both_buffers(kbdc, 10);
+		test_controller(kbdc);
+		test_kbd_port(kbdc);
+		/*
+		 * We could disable the keyboard port and interrupt... but, 
+		 * the keyboard may still exist (see above). 
+		 */
+		set_controller_command_byte(kbdc,
+		    ALLOW_DISABLE_KBD(kbdc) ? 0xff : KBD_KBD_CONTROL_BITS, c);
+		if (bootverbose)
+			printf("atkbd: failed to reset the keyboard.\n");
+		return (EIO);
+	}
+	return (0);
+}
+
 /* local functions */
 
 static int
@@ -1201,26 +1237,25 @@ probe_keyboard(KBDC kbdc, int flags)
 	 */
 	int err;
 	int c;
+	int m;
 
 	if (!kbdc_lock(kbdc, TRUE)) {
 		/* driver error? */
 		return ENXIO;
 	}
 
-	/*
-	 * XXX block data transmission from the keyboard.  This can cause
-	 * the keyboard to stop sending keystrokes even when re-enabled
-	 * under certain circumstances if not followed by a full reset.
-	 */
+	/* temporarily block data transmission from the keyboard */
 	write_controller_command(kbdc, KBDC_DISABLE_KBD_PORT);
 
 	/* flush any noise in the buffer */
 	empty_both_buffers(kbdc, 100);
 
 	/* save the current keyboard controller command byte */
+	m = kbdc_get_device_mask(kbdc) & ~KBD_KBD_CONTROL_BITS;
 	c = get_controller_command_byte(kbdc);
 	if (c == -1) {
 		/* CONTROLLER ERROR */
+		kbdc_set_device_mask(kbdc, m);
 		kbdc_lock(kbdc, FALSE);
 		return ENXIO;
 	}
@@ -1245,16 +1280,21 @@ probe_keyboard(KBDC kbdc, int flags)
 	 * to the system later.  It is NOT recommended to hot-plug
 	 * the AT keyboard, but many people do so...
 	 */
+	kbdc_set_device_mask(kbdc, m | KBD_KBD_CONTROL_BITS);
 	setup_kbd_port(kbdc, TRUE, TRUE);
 #if 0
-	if (err) {
+	if (err == 0) {
+		kbdc_set_device_mask(kbdc, m | KBD_KBD_CONTROL_BITS);
+	} else {
 		/* try to restore the command byte as before */
-		set_controller_command_byte(kbdc, KBD_KBD_CONTROL_BITS, c);
+		set_controller_command_byte(kbdc,
+		    ALLOW_DISABLE_KBD(kbdc) ? 0xff : KBD_KBD_CONTROL_BITS, c);
+		kbdc_set_device_mask(kbdc, m);
 	}
 #endif
 
 	kbdc_lock(kbdc, FALSE);
-	return err;
+	return (HAS_QUIRK(kbdc, KBDC_QUIRK_IGNORE_PROBE_RESULT) ? 0 : err);
 }
 
 static int
@@ -1269,11 +1309,7 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 		return EIO;
 	}
 
-	/*
-	 * XXX block data transmission from the keyboard.  This can cause
-	 * the keyboard to stop sending keystrokes even when re-enabled
-	 * under certain circumstances if not followed by a full reset.
-	 */
+	/* temporarily block data transmission from the keyboard */
 	write_controller_command(kbdc, KBDC_DISABLE_KBD_PORT);
 
 	/* save the current controller command byte */
@@ -1301,33 +1337,9 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 		return EIO;
 	}
 
-	codeset = -1;
-
-	/* reset keyboard hardware */
-	if (!(flags & KB_CONF_NO_RESET) && !reset_kbd(kbdc)) {
-		/*
-		 * KEYBOARD ERROR
-		 * Keyboard reset may fail either because the keyboard
-		 * doen't exist, or because the keyboard doesn't pass
-		 * the self-test, or the keyboard controller on the
-		 * motherboard and the keyboard somehow fail to shake hands.
-		 * It is just possible, particularly in the last case,
-		 * that the keyboard controller may be left in a hung state.
-		 * test_controller() and test_kbd_port() appear to bring
-		 * the keyboard controller back (I don't know why and how,
-		 * though.)
-		 */
-		empty_both_buffers(kbdc, 10);
-		test_controller(kbdc);
-		test_kbd_port(kbdc);
-		/*
-		 * We could disable the keyboard port and interrupt... but, 
-		 * the keyboard may still exist (see above). 
-		 */
-		set_controller_command_byte(kbdc, KBD_KBD_CONTROL_BITS, c);
+	if (HAS_QUIRK(kbdc, KBDC_QUIRK_RESET_AFTER_PROBE) &&
+	    atkbd_reset(kbdc, flags, c)) {
 		kbdc_lock(kbdc, FALSE);
-		if (bootverbose)
-			printf("atkbd: failed to reset the keyboard.\n");
 		return EIO;
 	}
 
@@ -1337,6 +1349,7 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 	 * been set up properly by BIOS and have not been messed up 
 	 * during the boot process.
 	 */
+	codeset = -1;
 	if (flags & KB_CONF_ALT_SCANCODESET)
 		/* the user says there is a XT keyboard */
 		codeset = 1;
@@ -1374,6 +1387,12 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 	if (bootverbose)
 		printf("atkbd: keyboard ID 0x%x (%d)\n", id, *type);
 
+	if (!HAS_QUIRK(kbdc, KBDC_QUIRK_RESET_AFTER_PROBE) &&
+	    atkbd_reset(kbdc, flags, c)) {
+		kbdc_lock(kbdc, FALSE);
+		return EIO;
+	}
+
 	/*
 	 * Allow us to set the XT_KEYBD flag so that keyboards
 	 * such as those on the IBM ThinkPad laptop computers can be used
@@ -1390,7 +1409,8 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 			 * The XT kbd isn't usable unless the proper scan
 			 * code set is selected. 
 			 */
-			set_controller_command_byte(kbdc, KBD_KBD_CONTROL_BITS, c);
+			set_controller_command_byte(kbdc, ALLOW_DISABLE_KBD(kbdc)
+			    ? 0xff : KBD_KBD_CONTROL_BITS, c);
 			kbdc_lock(kbdc, FALSE);
 			printf("atkbd: unable to set the XT keyboard mode.\n");
 			return EIO;
@@ -1408,12 +1428,13 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 	/*
 	 * Some keyboards require a SETLEDS command to be sent after
 	 * the reset command before they will send keystrokes to us
-	 * (Acer C720).
 	 */
-	if (send_kbd_command_and_data(kbdc, KBDC_SET_LEDS, 0) != KBD_ACK) {
+	if (HAS_QUIRK(kbdc, KBDC_QUIRK_SETLEDS_ON_INIT) &&
+	    send_kbd_command_and_data(kbdc, KBDC_SET_LEDS, 0) != KBD_ACK) {
 		printf("atkbd: setleds failed\n");
 	}
-	send_kbd_command(kbdc, KBDC_ENABLE_KBD);
+	if (!ALLOW_DISABLE_KBD(kbdc))
+	    send_kbd_command(kbdc, KBDC_ENABLE_KBD);
 
 	/* enable the keyboard port and intr. */
 	if (!set_controller_command_byte(kbdc, 
@@ -1425,9 +1446,9 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 		 * This is serious; we are left with the disabled
 		 * keyboard intr. 
 		 */
-		set_controller_command_byte(kbdc,
-			KBD_KBD_CONTROL_BITS | KBD_TRANSLATION |
-			KBD_OVERRIDE_KBD_LOCK, c);
+		set_controller_command_byte(kbdc, ALLOW_DISABLE_KBD(kbdc)
+		    ? 0xff : (KBD_KBD_CONTROL_BITS | KBD_TRANSLATION |
+			KBD_OVERRIDE_KBD_LOCK), c);
 		kbdc_lock(kbdc, FALSE);
 		printf("atkbd: unable to enable the keyboard port and intr.\n");
 		return EIO;
@@ -1449,16 +1470,12 @@ write_kbd(KBDC kbdc, int command, int data)
 	/* disable the keyboard and mouse interrupt */
 	s = spltty();
 #if 0
-	/*
-	 * XXX NOTE: We can't just disable the KBD port any more, even
-	 *           temporarily, without blowing up some BIOS emulations
-	 *           if not followed by a full reset.
-	 */
 	c = get_controller_command_byte(kbdc);
 	if ((c == -1) 
 	    || !set_controller_command_byte(kbdc, 
-		KBD_KBD_CONTROL_BITS,
-		KBD_DISABLE_KBD_PORT | KBD_DISABLE_KBD_INT)) {
+		kbdc_get_device_mask(kbdc),
+		KBD_DISABLE_KBD_PORT | KBD_DISABLE_KBD_INT
+		| KBD_DISABLE_AUX_PORT | KBD_DISABLE_AUX_INT)) {
 		/* CONTROLLER ERROR */
 		kbdc_lock(kbdc, FALSE);
 		splx(s);
@@ -1477,7 +1494,8 @@ write_kbd(KBDC kbdc, int command, int data)
 		send_kbd_command(kbdc, KBDC_ENABLE_KBD);
 #if 0
 	/* restore the interrupts */
-	if (!set_controller_command_byte(kbdc, KBD_KBD_CONTROL_BITS, c)) {
+	if (!set_controller_command_byte(kbdc, kbdc_get_device_mask(kbdc),
+	    c & (KBD_KBD_CONTROL_BITS | KBD_AUX_CONTROL_BITS))) { 
 		/* CONTROLLER ERROR */
 	}
 #else

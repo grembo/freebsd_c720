@@ -202,6 +202,11 @@ typedef struct atkbdc_softc {
     kqueue kbd;			/* keyboard data queue */
     kqueue aux;			/* auxiliary data queue */
     int retry;
+    int quirks;			/* controller doesn't like deactivate */
+#define KBDC_QUIRK_KEEP_ACTIVATED	(1 << 0)
+#define KBDC_QUIRK_IGNORE_PROBE_RESULT	(1 << 1)
+#define KBDC_QUIRK_RESET_AFTER_PROBE	(1 << 2)
+#define KBDC_QUIRK_SETLEDS_ON_INIT	(1 << 3)
 } atkbdc_softc_t; 
 
 enum kbdc_device_ivar {
@@ -254,6 +259,9 @@ int reset_aux_dev(KBDC kbdc);
 int test_controller(KBDC kbdc);
 int test_kbd_port(KBDC kbdc);
 int test_aux_port(KBDC kbdc);
+
+int kbdc_get_device_mask(KBDC kbdc);
+void kbdc_set_device_mask(KBDC kbdc, int mask);
 
 int get_controller_command_byte(KBDC kbdc);
 int set_controller_command_byte(KBDC kbdc, int command, int flag);
