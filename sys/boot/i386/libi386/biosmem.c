@@ -84,7 +84,7 @@ bios_getquirks(void)
     for (i=0; quirks[i].quirk != 0; ++i)
 	if (smbios_match(quirks[i].bios_vendor, quirks[i].maker,
 	    quirks[i].product))
-	    return (1);
+	    return (quirks[i].quirk);
 
     return (0);
 }
@@ -113,11 +113,10 @@ bios_getmem(void)
 	    bios_basemem = smap.length;
 	    b_bios_probed |= B_BASEMEM_E820;
 	}
+
 	/* look for the first segment in 'extended' memory */
-	/* we need it to be at least 32MiB or -HEAD won't load */
 	if ((smap.type == SMAP_TYPE_MEMORY) && (smap.base == 0x100000) &&
-	    (smap.length >= (32 * 1024 * 1024) ||
-	     !(bios_getquirks() & BQ_DISTRUST_E820_EXTMEM))) {
+	    !(bios_getquirks() & BQ_DISTRUST_E820_EXTMEM)) {
 	    bios_extmem = smap.length;
 	    b_bios_probed |= B_EXTMEM_E820;
 	}
@@ -168,8 +167,9 @@ bios_getmem(void)
 	     */
 	    high_heap_size = 0;
 	    high_heap_base = 0;
+
 	    /*
-	     * cx is the number of 1KiB blocks between 1..16MiB.
+	     * %cx is the number of 1KiB blocks between 1..16MiB.
 	     * It can only be up to 0x3c00; if it's smaller then
 	     * there's a PC AT memory hole so we can't treat
 	     * it as contiguous.
@@ -238,4 +238,4 @@ command_biosmem(int argc, char *argv[])
 	return (CMD_OK);
 }
 
-COMMAND_SET(smap, "biosmem", "show BIOS memory setup", command_biosmem);
+COMMAND_SET(biosmem, "biosmem", "show BIOS memory setup", command_biosmem);
