@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/options.powerpc 255643 2013-09-17 17:37:04Z nwhitehorn $
+# $FreeBSD: head/sys/conf/options.powerpc 278495 2015-02-10 06:35:16Z rpaulo $
 # Options specific to the powerpc platform kernels
 
 AIM			opt_global.h
@@ -24,7 +24,6 @@ PS3			opt_platform.h
 MAMBO
 PSERIES
 PSIM
-WII			opt_platform.h
 
 SC_OFWFB		opt_ofwfb.h
 

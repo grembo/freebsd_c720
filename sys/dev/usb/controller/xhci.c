@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/xhci.c 278071 2015-02-02 11:06:41Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/xhci.c 278477 2015-02-09 21:47:12Z hselasky $ */
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *
@@ -492,7 +492,7 @@ xhci_start_controller(struct xhci_softc *sc)
 	XWRITE4(sc, runt, XHCI_ERDP_LO(0), (uint32_t)addr);
 	XWRITE4(sc, runt, XHCI_ERDP_HI(0), (uint32_t)(addr >> 32));
 
-	addr = (uint64_t)buf_res.physaddr;
+	addr = buf_res.physaddr;
 
 	DPRINTF("ERSTBA(0)=0x%016llx\n", (unsigned long long)addr);
 
@@ -1114,7 +1114,7 @@ xhci_interrupt_poll(struct xhci_softc *sc)
 	 * register.
 	 */
 
-	addr = (uint32_t)buf_res.physaddr;
+	addr = buf_res.physaddr;
 	addr += (uintptr_t)&((struct xhci_hw_root *)0)->hwr_events[i];
 
 	/* try to clear busy bit */

@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD: head/sys/conf/files.powerpc 277166 2015-01-14 07:01:21Z jhibbits $
+# $FreeBSD: head/sys/conf/files.powerpc 278495 2015-02-10 06:35:16Z rpaulo $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -242,9 +242,3 @@ powerpc/psim/iobus.c 		optional	psim
 powerpc/psim/ata_iobus.c	optional	ata psim
 powerpc/psim/openpic_iobus.c	optional	psim
 powerpc/psim/uart_iobus.c	optional	uart psim
-powerpc/wii/platform_wii.c	optional	wii
-powerpc/wii/wii_bus.c		optional	wii
-powerpc/wii/wii_pic.c		optional	wii
-powerpc/wii/wii_fb.c		optional	wii
-powerpc/wii/wii_gpio.c		optional	wii wiigpio
-powerpc/wii/wii_ipc.c		optional	wii

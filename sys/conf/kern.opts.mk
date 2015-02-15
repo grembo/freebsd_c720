@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/kern.opts.mk 277728 2015-01-26 07:15:49Z ngie $
+# $FreeBSD: head/sys/conf/kern.opts.mk 278457 2015-02-09 16:03:55Z imp $
 
 # Options set in the build system that affect the kernel somehow.
 
@@ -58,7 +58,11 @@ MK_${var}:=	no
 .else
 MK_${var}:=	yes
 .endif
+.else
+.if ${MK_${var}} != "yes" && ${MK_${var}} != "no"
+.error "Illegal value for MK_${var}: ${MK_${var}}"
 .endif
+.endif # !defined(MK_${var})
 .endfor
 .undef __DEFAULT_YES_OPTIONS
 
@@ -70,7 +74,11 @@ MK_${var}:=	yes
 .else
 MK_${var}:=	no
 .endif
+.else
+.if ${MK_${var}} != "yes" && ${MK_${var}} != "no"
+.error "Illegal value for MK_${var}: ${MK_${var}}"
 .endif
+.endif # !defined(MK_${var})
 .endfor
 .undef __DEFAULT_NO_OPTIONS
 

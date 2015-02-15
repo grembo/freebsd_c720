@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/dtb.mk 276846 2015-01-08 18:28:06Z imp $
+# $FreeBSD: head/sys/conf/dtb.mk 278463 2015-02-09 16:29:44Z imp $
 #
 # The include file <dtb.mk> handles building and installing dtb files.
 #
@@ -45,7 +45,6 @@ SYSDIR=	${_dir}
 
 .PATH: ${SYSDIR}/gnu/dts/${MACHINE} ${SYSDIR}/boot/fdt/dts/${MACHINE}
 
-DTBDIR?=/boot/dtb
 DTB=${DTS:R:S/$/.dtb/}
 
 all: ${DTB}
@@ -64,6 +63,10 @@ CLEANFILES+=${_dts:R:S/$/.dtb/}
 realinstall: _dtbinstall
 .ORDER: beforeinstall _kmodinstall
 _dtbinstall:
+# Need to create this because installkernel doesn't invoke mtree with BSD.root.mtree
+# to make sure the tree is setup properly. We don't recreate it to avoid duplicate
+# entries in the NO_ROOT case.
+	test -d ${DESTDIR}${DTBDIR} || ${INSTALL} -d -o ${DTBOWN} -g ${DTBGRP} ${DESTDIR}${DTBDIR}
 .for _dtb in ${DTB}
 	${INSTALL} -o ${DTBOWN} -g ${DTBGRP} -m ${DTBMODE} \
 	    ${_INSTALLFLAGS} ${_dtb} ${DESTDIR}${DTBDIR}

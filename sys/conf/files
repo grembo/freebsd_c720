@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/files 278336 2015-02-06 23:34:40Z ngie $
+# $FreeBSD: head/sys/conf/files 278799 2015-02-15 12:02:17Z hselasky $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -2565,8 +2565,16 @@ dev/usb/template/usb_template_mtp.c	optional usb_template
 dev/usb/template/usb_template_phone.c	optional usb_template
 dev/usb/template/usb_template_serialnet.c	optional usb_template
 #
+# USB video drivers
+#
+dev/usb/video/udl.c			optional udl
+#
 # USB END
 #
+dev/videomode/videomode.c		optional videomode
+dev/videomode/edid.c			optional videomode
+dev/videomode/pickmode.c		optional videomode
+dev/videomode/vesagtf.c			optional videomode
 dev/utopia/idtphy.c		optional utopia
 dev/utopia/suni.c		optional utopia
 dev/utopia/utopia.c		optional utopia

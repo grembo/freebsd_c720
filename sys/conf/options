@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/options 278365 2015-02-07 23:09:03Z adrian $
+# $FreeBSD: head/sys/conf/options 278798 2015-02-15 11:37:40Z hselasky $
 #
 #        On the handling of kernel options
 #
@@ -888,6 +888,9 @@ TDMA_TXRATE_HALF_DEFAULT	opt_tdma.h
 TDMA_TXRATE_QUARTER_DEFAULT	opt_tdma.h
 TDMA_TXRATE_11NA_DEFAULT	opt_tdma.h
 TDMA_TXRATE_11NG_DEFAULT	opt_tdma.h
+
+# VideoMode
+PICKMODE_DEBUG			opt_videomode.h
 
 # Network stack virtualization options
 VIMAGE			opt_global.h
