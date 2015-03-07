@@ -55,7 +55,12 @@ static int smbus_detach(device_t);
 
 static device_t smbus_add_child(device_t parent, u_int order,
 		    const char *name, int unit);
+static int smbus_child_location_str(device_t parent, device_t child,
+		    char *buf, size_t buflen);
+static int smbus_print_child(device_t parent, device_t child);
 static void smbus_probe_device(device_t dev, u_char* addr);
+static int smbus_read_ivar(device_t parent, device_t child, int which,
+		    uintptr_t *result);
 
 static device_method_t smbus_methods[] = {
         /* device interface */
@@ -65,7 +70,10 @@ static device_method_t smbus_methods[] = {
 
 	/* bus interface */
 	DEVMETHOD(bus_add_child,	smbus_add_child),
+	DEVMETHOD(bus_child_location_str, smbus_child_location_str),
 	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
+	DEVMETHOD(bus_print_child,	smbus_print_child),
+	DEVMETHOD(bus_read_ivar,	smbus_read_ivar),
 
 	DEVMETHOD_END
 };
@@ -101,7 +109,7 @@ smbus_attach(device_t dev)
 	mtx_init(&sc->lock, device_get_nameunit(dev), "smbus", MTX_DEF);
 
 	device_add_child(dev, NULL, -1);
-	for (addr = 16; addr < 112; ++addr) {
+	for (addr = SMBUS_ADDR_MIN; addr < SMBUS_ADDR_MAX; ++addr) {
 		sc->addrs[addr] = addr;
 		smbus_probe_device(dev, &sc->addrs[addr]);
 	}
@@ -153,11 +161,53 @@ smbus_add_child(device_t parent, u_int order, const char *name, int unit)
 {
 	device_t child;
 
-	device_printf(parent, "smbus_add_child unit %d at %d\n", unit, order);
 	child = device_add_child_ordered(parent, order, NULL, unit);
 	device_probe_and_attach(child);
 
 	return (child);
+}
+
+static int
+smbus_child_location_str(device_t parent, device_t child, char *buf,
+    size_t buflen)
+{
+	unsigned char *addr;
+
+	addr = device_get_ivars(child);
+	if (addr)
+		snprintf(buf, buflen, "addr=0x%x", *addr);
+	else if (buflen)
+		buf[0] = 0;
+	return (0);
+}
+
+static int
+smbus_print_child(device_t parent, device_t child)
+{
+	unsigned char *addr;
+	int retval;
+
+	addr = device_get_ivars(child);
+	retval = bus_print_child_header(parent, child);
+	if (addr)
+		retval += printf(" at addr 0x%x", *addr);
+	retval += bus_print_child_footer(parent, child);
+
+	return (retval);
+}
+
+static int
+smbus_read_ivar(device_t parent, device_t child, int which,
+    uintptr_t *result)
+{
+	unsigned char *addr;
+
+	addr = device_get_ivars(child);
+	if (addr && which == SMBUS_CHILD_IVAR_ADDR) {
+		*result = *addr;
+		return (0);
+	}
+	return (ENOENT);
 }
 
 MODULE_VERSION(smbus, SMBUS_MODVER);
