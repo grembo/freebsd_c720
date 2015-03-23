@@ -26,7 +26,7 @@
 .\"
 .\" $FreeBSD: head/share/man/man4/smb.4 213573 2010-10-08 12:40:16Z uqs $
 .\"
-.Dd March 7, 2015
+.Dd March 21, 2015
 .Dt SMB 4
 .Os
 .Sh NAME
@@ -65,9 +65,9 @@ struct smbcmd {
 	} rdata;
 	int  slave;
 	char *wbuf;     /* use wdata if NULL */
-	int  wcount;    /* max 255 bytes */
+	int  wcount;
 	char *rbuf;     /* use rdata if NULL */
-	int  rcount;    /* max 255 bytes */
+	int  rcount;
 };
 .Ed
 .Pp

@@ -38,8 +38,6 @@ struct smbus_softc {
 	unsigned char addrs[SMBUS_ADDR_MAX];
 };
 
-enum smbus_child_ivars { SMBUS_CHILD_IVAR_ADDR };
-
 void smbus_generic_intr(device_t dev, u_char devaddr, char low, char high, int err);
 
 #endif

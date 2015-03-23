@@ -47,9 +47,9 @@ struct smbcmd {
 	} rdata;
 	int  slave;
 	char *wbuf;	/* use wdata if NULL */
-	int  wcount;	/* max 255 bytes */
+	int  wcount;
 	char *rbuf;	/* use rdata if NULL */
-	int  rcount;	/* max 255 bytes */
+	int  rcount;
 };
 
 /*

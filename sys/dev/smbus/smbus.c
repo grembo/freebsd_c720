@@ -203,11 +203,14 @@ smbus_read_ivar(device_t parent, device_t child, int which,
 	unsigned char *addr;
 
 	addr = device_get_ivars(child);
-	if (addr && which == SMBUS_CHILD_IVAR_ADDR) {
-		*result = *addr;
-		return (0);
+	switch (which) {
+	case SMBUS_IVAR_ADDR:
+		*result = (addr == NULL) ? -1 : *addr;
+		break;
+	default:
+		return (ENOENT);
 	}
-	return (ENOENT);
+	return (0);
 }
 
 MODULE_VERSION(smbus, SMBUS_MODVER);
