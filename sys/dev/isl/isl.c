@@ -142,7 +142,6 @@ done:
 	return error;
 }
 
-static void isl_identify(driver_t *driver, device_t parent);
 static int isl_probe(device_t);
 static int isl_attach(device_t);
 static int isl_detach(device_t);
@@ -153,7 +152,6 @@ static devclass_t isl_devclass;
 
 static device_method_t isl_methods[] = {
 	/* device interface */
-	DEVMETHOD(device_identify,	isl_identify),
 	DEVMETHOD(device_probe,		isl_probe),
 	DEVMETHOD(device_attach,	isl_attach),
 	DEVMETHOD(device_detach,	isl_detach),
@@ -177,20 +175,12 @@ static struct cdevsw isl_cdevsw = {
 //	.d_poll =	islpoll,
 };
 
-static void
-isl_identify(driver_t *driver, device_t parent)
-{
-	if (device_find_child(parent, "isl", -1) == NULL)
-		BUS_ADD_CHILD(parent, 0, "isl", -1);
-}
-
 static int
 isl_probe(device_t dev)
 {
 	device_t bus;
 	int unit;
 	int addr;
-	unsigned char* addr_ptr;
 	int error;
 	int dummy = 0;
 
@@ -199,26 +189,16 @@ isl_probe(device_t dev)
 	if (!bus)
 	    return (ENXIO);
 	
-	addr_ptr = device_get_ivars(dev);
+	addr = smbus_get_addr(dev);
 	
-	if (!addr_ptr) {
-	    printf("No address ptr set, parent %s\n", device_get_name(bus) ? device_get_name(bus) : "unknown");
-	    return (ENXIO);
-	}
-	
-	addr = *addr_ptr;
-
-
 	/*
 	 * Only match against specific addresses to avoid blowing up
 	 * other I2C devices (?).  At least for now.
 	 *	
 	 * 0x44 - isl ambient light sensor on the acer c720.
 	 */
-	if (addr != 0x44) {
-		printf("isl_probe called on unknown I2C device: %i\n", addr);
+	if (addr != 0x44)
 		return (ENXIO);
-	}
 
 	unit = device_get_unit(dev);
 	tsleep(&dummy, 0, "cyastab", hz);
