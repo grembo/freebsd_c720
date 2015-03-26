@@ -100,9 +100,11 @@ smb_identify(driver_t *driver, device_t parent)
 static int
 smb_probe(device_t dev)
 {
-	device_set_desc(dev, "SMBus generic I/O");
+	if (smbus_get_addr(dev) != -1)
+		return (ENXIO);
 
-	return (BUS_PROBE_GENERIC);
+	device_set_desc(dev, "SMBus generic I/O");
+	return (BUS_PROBE_NOWILDCARD);
 }
 	
 static int

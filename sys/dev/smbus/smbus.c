@@ -33,7 +33,7 @@ __FBSDID("$FreeBSD: head/sys/dev/smbus/smbus.c 227843 2011-11-22 21:28:20Z mariu
 #include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
-#include <sys/bus.h> 
+#include <sys/bus.h>
 
 #include <dev/smbus/smbconf.h>
 #include <dev/smbus/smbus.h>
@@ -53,8 +53,6 @@ static int smbus_probe(device_t);
 static int smbus_attach(device_t);
 static int smbus_detach(device_t);
 
-static device_t smbus_add_child(device_t parent, u_int order,
-		    const char *name, int unit);
 static int smbus_child_location_str(device_t parent, device_t child,
 		    char *buf, size_t buflen);
 static int smbus_print_child(device_t parent, device_t child);
@@ -69,7 +67,7 @@ static device_method_t smbus_methods[] = {
         DEVMETHOD(device_detach,        smbus_detach),
 
 	/* bus interface */
-	DEVMETHOD(bus_add_child,	smbus_add_child),
+	DEVMETHOD(bus_add_child,	bus_generic_add_child),
 	DEVMETHOD(bus_child_location_str, smbus_child_location_str),
 	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
 	DEVMETHOD(bus_print_child,	smbus_print_child),
@@ -108,7 +106,7 @@ smbus_attach(device_t dev)
 
 	mtx_init(&sc->lock, device_get_nameunit(dev), "smbus", MTX_DEF);
 
-	device_add_child(dev, NULL, -1);
+	device_add_child(dev, "smb", -1);
 	for (addr = SMBUS_ADDR_MIN; addr < SMBUS_ADDR_MAX; ++addr) {
 		sc->addrs[addr] = addr;
 		smbus_probe_device(dev, &sc->addrs[addr]);
@@ -154,17 +152,6 @@ smbus_probe_device(device_t dev, u_char* addr)
 		child = device_add_child(dev, NULL, -1);
 		device_set_ivars(child, addr);
 	}
-}
-
-static device_t
-smbus_add_child(device_t parent, u_int order, const char *name, int unit)
-{
-	device_t child;
-
-	child = device_add_child_ordered(parent, order, NULL, unit);
-	device_probe_and_attach(child);
-
-	return (child);
 }
 
 static int
