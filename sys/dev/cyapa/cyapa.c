@@ -403,7 +403,6 @@ done:
 	return error;
 }
 
-static void cyapa_identify(driver_t *driver, device_t parent);
 static int cyapa_probe(device_t);
 static int cyapa_attach(device_t);
 static int cyapa_detach(device_t);
@@ -412,7 +411,6 @@ static devclass_t cyapa_devclass;
 
 static device_method_t cyapa_methods[] = {
 	/* device interface */
-	DEVMETHOD(device_identify,	cyapa_identify),
 	DEVMETHOD(device_probe,		cyapa_probe),
 	DEVMETHOD(device_attach,	cyapa_attach),
 	DEVMETHOD(device_detach,	cyapa_detach),
@@ -445,13 +443,6 @@ static struct cdevsw cyapa_cdevsw = {
 	.d_poll =	cyapapoll,
 };
 
-static void
-cyapa_identify(driver_t *driver, device_t parent)
-{
-	if (device_find_child(parent, "cyapa", -1) == NULL)
-		BUS_ADD_CHILD(parent, 0, "cyapa", -1);
-}
-
 static int
 cyapa_probe(device_t dev)
 {
@@ -459,7 +450,6 @@ cyapa_probe(device_t dev)
 	struct cyapa_cap cap;
 	int unit;
 	int addr;
-	unsigned char* addr_ptr;
 	int error;
 	int dummy = 0;
 
@@ -468,22 +458,13 @@ cyapa_probe(device_t dev)
 	if (!bus)
 	    return (ENXIO);
 	
-	addr_ptr = device_get_ivars(dev);
+	addr = smbus_get_addr(dev);
 	
-	if (!addr_ptr) {
-	    printf("No address ptr set\n");
-	    return (ENXIO);
-	}
-	
-	addr = *addr_ptr;
-
 	/*
 	 * 0x67 - cypress trackpad on the acer c720 (other devices might use other ids).
 	 */
-	if (addr != 0x067) {
-		printf("cyapa_probe called on unknown I2C device: %i\n", addr);
+	if (addr != 0x67)
 		return (ENXIO);
-	}
 
 	unit = device_get_unit(dev);
 	tsleep(&dummy, 0, "cyastab", hz);
