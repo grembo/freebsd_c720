@@ -106,7 +106,7 @@ smbus_attach(device_t dev)
 
 	mtx_init(&sc->lock, device_get_nameunit(dev), "smbus", MTX_DEF);
 
-	device_add_child(dev, "smb", -1);
+	bus_generic_probe(dev);
 	for (addr = SMBUS_ADDR_MIN; addr < SMBUS_ADDR_MAX; ++addr) {
 		sc->addrs[addr] = addr;
 		smbus_probe_device(dev, &sc->addrs[addr]);
