@@ -105,7 +105,6 @@ smbus_attach(device_t dev)
 	unsigned char addr;
 
 	mtx_init(&sc->lock, device_get_nameunit(dev), "smbus", MTX_DEF);
-
 	bus_generic_probe(dev);
 	for (addr = SMBUS_ADDR_MIN; addr < SMBUS_ADDR_MAX; ++addr) {
 		sc->addrs[addr] = addr;
