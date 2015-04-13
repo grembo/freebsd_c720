@@ -26,7 +26,7 @@
 .\"
 .\" $FreeBSD: head/share/man/man4/smb.4 213573 2010-10-08 12:40:16Z uqs $
 .\"
-.Dd March 21, 2015
+.Dd April 13, 2015
 .Dt SMB 4
 .Os
 .Sh NAME
@@ -162,7 +162,8 @@ data can be transferred in a single block read or write command,
 but since
 .Xr smbus 4
 is also used to access I2C devices, the limit has been increased
-to 1024. This value is available in the constant
+to 1024.
+This value is available in the constant
 .Dv SMB_MAXBLOCKSIZE .
 .It Dv SMB_BREAD Ta
 The
