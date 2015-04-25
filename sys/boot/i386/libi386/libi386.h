@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: head/sys/boot/i386/libi386/libi386.h 277215 2015-01-15 16:27:20Z royger $
+ * $FreeBSD: head/sys/boot/i386/libi386/libi386.h 281138 2015-04-06 06:55:47Z rpaulo $
  */
 
 
@@ -112,10 +112,6 @@ int biospci_read_config(uint32_t locator, int offset, int width, uint32_t *val);
 uint32_t biospci_locator(int8_t bus, uint8_t device, uint8_t function);
 
 void	biosacpi_detect(void);
-
-void	smbios_detect(void);
-int	smbios_match(const char* bios_vendor, const char* maker,
-	    const char* product);
 
 int	i386_autoload(void);
 

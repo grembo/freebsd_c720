@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/dev/usb/controller/uhci_pci.c 276717 2015-01-05 20:22:18Z hselasky $");
+__FBSDID("$FreeBSD: head/sys/dev/usb/controller/uhci_pci.c 281499 2015-04-13 19:13:51Z neel $");
 
 /* Universal Host Controller Interface
  *
@@ -244,7 +244,7 @@ uhci_pci_probe(device_t self)
 
 	if (desc) {
 		device_set_desc(self, desc);
-		return (0);
+		return (BUS_PROBE_DEFAULT);
 	} else {
 		return (ENXIO);
 	}

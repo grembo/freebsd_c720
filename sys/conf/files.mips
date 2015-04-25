@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD: head/sys/conf/files.mips 269577 2014-08-05 09:44:10Z glebius $
+# $FreeBSD: head/sys/conf/files.mips 281098 2015-04-05 02:57:02Z adrian $
 #
 
 # Arch dependent files
@@ -89,3 +89,4 @@ dev/nvram2env/nvram2env.c		optional	nvram2env
 # hwpmc support
 dev/hwpmc/hwpmc_mips.c			optional	hwpmc
 dev/hwpmc/hwpmc_mips24k.c		optional	hwpmc_mips24k
+dev/hwpmc/hwpmc_mips74k.c		optional	hwpmc_mips74k

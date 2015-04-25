@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/uhci.c 267992 2014-06-28 03:56:17Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/uhci.c 278883 2015-02-17 07:52:50Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
@@ -1476,7 +1476,8 @@ uhci_interrupt(uhci_softc_t *sc)
 	    UHCI_STS_USBEI |
 	    UHCI_STS_RD |
 	    UHCI_STS_HSE |
-	    UHCI_STS_HCPE);
+	    UHCI_STS_HCPE |
+	    UHCI_STS_HCH);
 
 	if (status == 0) {
 		/* nothing to acknowledge */

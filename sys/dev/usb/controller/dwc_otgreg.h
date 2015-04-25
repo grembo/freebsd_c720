@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/dwc_otgreg.h 265777 2014-05-09 14:23:06Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/dwc_otgreg.h 279210 2015-02-23 17:01:38Z hselasky $ */
 
 /*-
  * Copyright (c) 2010,2011 Aleksandr Rybalko. All rights reserved.
@@ -195,6 +195,14 @@
 #define	GUSBCFG_PHYIF			(1<<3)
 #define	GUSBCFG_TOUTCAL_MASK		0x00000007
 #define	GUSBCFG_TOUTCAL_SHIFT		0
+
+/* STM32F4 */
+#define	DOTG_GGPIO_NOVBUSSENS		(1 << 21)
+#define	DOTG_GGPIO_SOFOUTEN		(1 << 20)
+#define	DOTG_GGPIO_VBUSBSEN		(1 << 19)
+#define	DOTG_GGPIO_VBUSASEN		(1 << 18)
+#define	DOTG_GGPIO_I2CPADEN		(1 << 17)
+#define	DOTG_GGPIO_PWRDWN		(1 << 16)
 
 #define	GRSTCTL_AHBIDLE			(1<<31)
 #define	GRSTCTL_DMAREQ			(1<<30)

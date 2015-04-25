@@ -1,48 +1,40 @@
-# Makefile.powerpc -- with config changes.
+# Makefile.arm64 -- with config changes.
 # Copyright 1990 W. Jolitz
 #	from: @(#)Makefile.i386	7.1 5/10/91
-# $FreeBSD: head/sys/conf/Makefile.powerpc 279750 2015-03-07 20:14:46Z nwhitehorn $
+#	from FreeBSD: src/sys/conf/Makefile.i386,v 1.255 2002/02/20 23:35:49
+# $FreeBSD: head/sys/conf/Makefile.arm64 281494 2015-04-13 14:43:10Z andrew $
 #
 # Makefile for FreeBSD
 #
 # This makefile is constructed from a machine description:
 #	config machineid
 # Most changes should be made in the machine description
-#	/sys/powerpc/conf/``machineid''
+#	/sys/arm64/conf/``machineid''
 # after which you should do
 #	 config machineid
 # Generic makefile changes should be made in
-#	/sys/conf/Makefile.powerpc
+#	/sys/conf/Makefile.arm64
 # after which config should be rerun for all machines.
 #
 
 # Which version of config(8) is required.
 %VERSREQ=	600012
 
-STD8X16FONT?=	iso
-
 .if !defined(S)
-.if exists(./@/.)
-S=	./@
-.else
 S=	../../..
 .endif
-.endif
-
-LDSCRIPT_NAME?= ldscript.${MACHINE_ARCH}
-
 .include "$S/conf/kern.pre.mk"
 
 INCLUDES+= -I$S/contrib/libfdt
 
-CFLAGS+= -msoft-float -Wa,-many
+# We generally don't want fpu instructions in the kernel.
+CFLAGS += -mgeneral-regs-only
 
-# Build position-independent kernel
-CFLAGS+= -fPIC
-LDFLAGS+= -pie
+# Reserve x18 for pcpu data
+CFLAGS += -ffixed-x18
 
 .if !empty(DDB_ENABLED)
-CFLAGS+=	-fno-omit-frame-pointer
+CFLAGS += -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer
 .endif
 
 %BEFORE_DEPEND

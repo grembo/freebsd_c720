@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
-# $FreeBSD: head/share/man/man4/Makefile 278799 2015-02-15 12:02:17Z hselasky $
+# $FreeBSD: head/share/man/man4/Makefile 281705 2015-04-18 21:00:36Z markj $
 
 .include <src.opts.mk>
 
@@ -120,6 +120,14 @@ MAN=	aac.4 \
 	divert.4 \
 	${_dpms.4} \
 	dpt.4 \
+	ds1307.4 \
+	ds3231.4 \
+	${_dtrace_io.4} \
+	${_dtrace_ip.4} \
+	${_dtrace_proc.4} \
+	${_dtrace_sched.4} \
+	${_dtrace_tcp.4} \
+	${_dtrace_udp.4} \
 	dummynet.4 \
 	ed.4 \
 	edsc.4 \
@@ -576,7 +584,9 @@ MLINKS+=cdce.4 if_cdce.4
 MLINKS+=crypto.4 cryptodev.4
 MLINKS+=cue.4 if_cue.4
 MLINKS+=cxgb.4 if_cxgb.4
-MLINKS+=cxgbe.4 if_cxgbe.4
+MLINKS+=cxgbe.4 if_cxgbe.4 \
+	cxgbe.4 cxl.4 \
+	cxgbe.4 if_cxl.4
 MLINKS+=dc.4 if_dc.4
 MLINKS+=de.4 if_de.4
 MLINKS+=disc.4 if_disc.4
@@ -809,6 +819,15 @@ SUBDIR=	man4.${MACHINE_CPUARCH}
 
 .if ${MK_CCD} != "no"
 _ccd.4=		ccd.4
+.endif
+
+.if ${MK_CDDL} != "no"
+_dtrace_io.4=	dtrace-io.4
+_dtrace_ip.4=	dtrace-ip.4
+_dtrace_proc.4=	dtrace-proc.4
+_dtrace_sched.4= dtrace-sched.4
+_dtrace_tcp.4=	dtrace-tcp.4
+_dtrace_udp.4=	dtrace-udp.4
 .endif
 
 .if ${MK_ISCSI} != "no"

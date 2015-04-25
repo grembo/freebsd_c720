@@ -3,7 +3,7 @@
 #
 # modified for PC-9801/PC-9821
 #
-# $FreeBSD: head/sys/conf/files.pc98 272492 2014-10-04 06:01:30Z nyan $
+# $FreeBSD: head/sys/conf/files.pc98 281940 2015-04-24 16:20:56Z kib $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -248,6 +248,7 @@ x86/isa/isa.c			optional isa
 x86/pci/pci_bus.c		optional pci
 x86/x86/busdma_bounce.c		standard
 x86/x86/busdma_machdep.c	standard
+x86/x86/cpu_machdep.c		standard
 x86/x86/dump_machdep.c		standard
 x86/x86/identcpu.c		standard
 x86/x86/intr_machdep.c		standard
@@ -255,6 +256,7 @@ x86/x86/io_apic.c		optional apic
 x86/x86/legacy.c		standard
 x86/x86/local_apic.c		optional apic
 x86/x86/mca.c			standard
+x86/x86/mp_x86.c		optional smp
 x86/x86/mptable.c		optional apic
 x86/x86/mptable_pci.c		optional apic pci
 x86/x86/msi.c			optional apic pci
