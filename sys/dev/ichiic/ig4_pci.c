@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  */
 /*
- * Intel 4th generation mobile cpus integrated I2C device, smbus driver.
+ * Intel fourth generation mobile cpus integrated I2C device, smbus driver.
  *
  * See ig4_reg.h for datasheet reference and notes.
  */
@@ -65,8 +65,7 @@ static int ig4iic_pci_detach(device_t dev);
 #define PCI_CHIP_LYNXPT_LP_I2C_1	0x9c618086
 #define PCI_CHIP_LYNXPT_LP_I2C_2	0x9c628086
 
-static
-int
+static int
 ig4iic_pci_probe(device_t dev)
 {
 	switch(pci_get_devid(dev)) {
@@ -77,13 +76,12 @@ ig4iic_pci_probe(device_t dev)
 		device_set_desc(dev, "Intel Lynx Point-LP I2C Controller-2");
 		break;
 	default:
-		return(ENXIO);
+		return (ENXIO);
 	}
-	return BUS_PROBE_DEFAULT;
+	return (BUS_PROBE_DEFAULT);
 }
 
-static
-int
+static int
 ig4iic_pci_attach(device_t dev)
 {
 	ig4iic_softc_t *sc = device_get_softc(dev);
@@ -122,11 +120,10 @@ ig4iic_pci_attach(device_t dev)
 	if (error)
 		ig4iic_pci_detach(dev);
 
-	return error;
+	return (error);
 }
 
-static
-int
+static int
 ig4iic_pci_detach(device_t dev)
 {
 	ig4iic_softc_t *sc = device_get_softc(dev);
@@ -135,7 +132,7 @@ ig4iic_pci_detach(device_t dev)
 	if (sc->pci_attached) {
 		error = ig4iic_detach(sc);
 		if (error)
-			return error;
+			return (error);
 		sc->pci_attached = 0;
 	}
 
@@ -155,7 +152,7 @@ ig4iic_pci_detach(device_t dev)
 	sc->regs_h = 0;
 	mtx_destroy(&sc->mutex);
 
-	return 0;
+	return (0);
 }
 
 static device_method_t ig4iic_pci_methods[] = {

@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  */
 /*
- * Intel 4th generation mobile cpus integrated I2C device.
+ * Intel fourth generation mobile cpus integrated I2C device.
  *
  * Datasheet reference:  Section 22.
  *

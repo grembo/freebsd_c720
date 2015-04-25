@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  */
 /*
- * Intel 4th generation mobile cpus integrated I2C device, smbus driver.
+ * Intel fourth generation mobile cpus integrated I2C device, smbus driver.
  *
  * See ig4_reg.h for datasheet reference and notes.
  */
@@ -73,8 +73,7 @@ SYSCTL_INT(_debug, OID_AUTO, ig4_dump, CTLTYPE_INT | CTLFLAG_RW,
 /*
  * Low-level inline support functions
  */
-static __inline
-void
+static __inline void
 reg_write(ig4iic_softc_t *sc, uint32_t reg, uint32_t value)
 {
 	bus_space_write_4(sc->regs_t, sc->regs_h, reg, value);
@@ -82,8 +81,7 @@ reg_write(ig4iic_softc_t *sc, uint32_t reg, uint32_t value)
 			  BUS_SPACE_BARRIER_WRITE);
 }
 
-static __inline
-uint32_t
+static __inline uint32_t
 reg_read(ig4iic_softc_t *sc, uint32_t reg)
 {
 	uint32_t value;
@@ -91,15 +89,14 @@ reg_read(ig4iic_softc_t *sc, uint32_t reg)
 	bus_space_barrier(sc->regs_t, sc->regs_h, reg, 4,
 			  BUS_SPACE_BARRIER_READ);
 	value = bus_space_read_4(sc->regs_t, sc->regs_h, reg);
-	return value;
+	return (value);
 }
 
 /*
  * Enable or disable the controller and wait for the controller to acknowledge
  * the state change.
  */
-static
-int
+static int
 set_controller(ig4iic_softc_t *sc, uint32_t ctl)
 {
 	int retry;
@@ -117,14 +114,13 @@ set_controller(ig4iic_softc_t *sc, uint32_t ctl)
 		}
 		mtx_sleep(sc, &sc->mutex, 0, "i2cslv", 1);
 	}
-	return error;
+	return (error);
 }
 
 /*
  * Wait up to 25ms for the requested status using a 25uS polling loop.
  */
-static
-int
+static int
 wait_status(ig4iic_softc_t *sc, uint32_t status)
 {
 	uint32_t v;
@@ -136,7 +132,7 @@ wait_status(ig4iic_softc_t *sc, uint32_t status)
 	error = SMB_ETIMEOUT;
 	/* XXX ticks are not very precise, we should fix that */
 	count = ticks;
-	limit = 5; /* was 3 */ /* (25000 / tick) + 0.5; */
+	limit = 5; /* XXX:: was 3 */ /* (25000 / tick) + 0.5; */
 
 	for (;;) {
 		/*
@@ -189,7 +185,7 @@ wait_status(ig4iic_softc_t *sc, uint32_t status)
 		}
 	}
 
-	return error;
+	return (error);
 }
 
 /*
@@ -197,8 +193,7 @@ wait_status(ig4iic_softc_t *sc, uint32_t status)
  * the interrupt code, otherwise it is sitting in the data
  * register.
  */
-static
-uint8_t
+static uint8_t
 data_read(ig4iic_softc_t *sc)
 {
 	uint8_t c;
@@ -209,7 +204,7 @@ data_read(ig4iic_softc_t *sc)
 		c = sc->rbuf[sc->rpos & IG4_RBUFMASK];
 		++sc->rpos;
 	}
-	return c;
+	return (c);
 }
 
 /*
@@ -219,8 +214,7 @@ data_read(ig4iic_softc_t *sc)
  * This operation does not issue anything to the I2C bus but sets
  * the target address for when the controller later issues a START.
  */
-static
-void
+static void
 set_slave_addr(ig4iic_softc_t *sc, uint8_t slave, int trans_op)
 {
 	uint32_t tar;
@@ -467,7 +461,7 @@ done:
 	/* XXX wait for xmit buffer to become empty */
 	last = reg_read(sc, IG4_REG_TX_ABRT_SOURCE);
 
-	return error;
+	return (error);
 }
 
 /*
@@ -683,7 +677,7 @@ ig4iic_smb_callback(device_t dev, int index, void *data)
 
 	mtx_unlock(&sc->mutex);
 
-	return error;
+	return (error);
 }
 
 /*
@@ -712,7 +706,7 @@ ig4iic_smb_quick(device_t dev, u_char slave, int how)
 	}
 	mtx_unlock(&sc->mutex);
 
-	return error;
+	return (error);
 }
 
 /*
@@ -741,7 +735,7 @@ ig4iic_smb_sendb(device_t dev, u_char slave, char byte)
 	}
 
 	mtx_unlock(&sc->mutex);
-	return error;
+	return (error);
 }
 
 /*
@@ -768,7 +762,7 @@ ig4iic_smb_recvb(device_t dev, u_char slave, char *byte)
 	}
 
 	mtx_unlock(&sc->mutex);
-	return error;
+	return (error);
 }
 
 /*
@@ -787,7 +781,7 @@ ig4iic_smb_writeb(device_t dev, u_char slave, char cmd, char byte)
 				&byte, 1, NULL, 0, NULL);
 
 	mtx_unlock(&sc->mutex);
-	return error;
+	return (error);
 }
 
 /*
@@ -809,7 +803,7 @@ ig4iic_smb_writew(device_t dev, u_char slave, char cmd, short word)
 				buf, 2, NULL, 0, NULL);
 
 	mtx_unlock(&sc->mutex);
-	return error;
+	return (error);
 }
 
 /*
@@ -828,7 +822,7 @@ ig4iic_smb_readb(device_t dev, u_char slave, char cmd, char *byte)
 				NULL, 0, byte, 1, NULL);
 
 	mtx_unlock(&sc->mutex);
-	return error;
+	return (error);
 }
 
 /*
@@ -850,7 +844,7 @@ ig4iic_smb_readw(device_t dev, u_char slave, char cmd, short *word)
 	}
 
 	mtx_unlock(&sc->mutex);
-	return error;
+	return (error);
 }
 
 /*
@@ -876,7 +870,7 @@ ig4iic_smb_pcall(device_t dev, u_char slave, char cmd,
 	}
 
 	mtx_unlock(&sc->mutex);
-	return error;
+	return (error);
 }
 
 int
@@ -893,7 +887,7 @@ ig4iic_smb_bwrite(device_t dev, u_char slave, char cmd,
 				buf, wcount, NULL, 0, NULL);
 
 	mtx_unlock(&sc->mutex);
-	return error;
+	return (error);
 }
 
 int
@@ -912,7 +906,7 @@ ig4iic_smb_bread(device_t dev, u_char slave, char cmd,
 	*countp_char = rcount;
 
 	mtx_unlock(&sc->mutex);
-	return error;
+	return (error);
 }
 
 int
@@ -930,14 +924,13 @@ ig4iic_smb_trans(device_t dev, int slave, char cmd, int op,
 				wbuf, wcount, rbuf, rcount, actualp);
 
 	mtx_unlock(&sc->mutex);
-	return error;
+	return (error);
 }
 
 /*
  * Interrupt Operation
  */
-static
-void
+static void
 ig4iic_intr(void *cookie)
 {
 	ig4iic_softc_t *sc = cookie;
@@ -960,8 +953,7 @@ ig4iic_intr(void *cookie)
 #define REGDUMP(sc, reg)	\
 	device_printf(sc->dev, "  %-23s %08x\n", #reg, reg_read(sc, reg))
 
-static
-void
+static void
 ig4iic_dump(ig4iic_softc_t *sc)
 {
 	device_printf(sc->dev, "ig4iic register dump:\n");
