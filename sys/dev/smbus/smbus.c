@@ -147,7 +147,8 @@ smbus_probe_device(device_t dev, u_char* addr)
 			    SMB_TRANS_NOCNT | SMB_TRANS_NOREPORT,
 			    NULL, 0, buf, 1, NULL);
 	if (error == 0) {
-		device_printf(dev, "Probed address 0x%02x\n", *addr);
+		if (bootverbose)
+			device_printf(dev, "Probed address 0x%02x\n", *addr);
 		child = device_add_child(dev, NULL, -1);
 		device_set_ivars(child, addr);
 	}
