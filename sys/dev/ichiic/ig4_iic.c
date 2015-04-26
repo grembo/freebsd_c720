@@ -501,7 +501,6 @@ ig4iic_attach(ig4iic_softc_t *sc)
 		error = ENXIO;
 		goto done;
 	}
-#if 1
 	v = reg_read(sc, IG4_REG_SS_SCL_HCNT);
 	device_printf(sc->dev, "SS_SCL_HCNT=%08x", v);
 	v = reg_read(sc, IG4_REG_SS_SCL_LCNT);
@@ -517,7 +516,7 @@ ig4iic_attach(ig4iic_softc_t *sc)
 	reg_write(sc, IG4_REG_FS_SCL_HCNT, v);
 	v = reg_read(sc, IG4_REG_SS_SCL_LCNT);
 	reg_write(sc, IG4_REG_FS_SCL_LCNT, v);
-#endif
+
 	/*
 	 * Program based on a 25000 Hz clock.  This is a bit of a
 	 * hack (obviously).  The defaults are 400 and 470 for standard
