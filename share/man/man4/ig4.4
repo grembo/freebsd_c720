@@ -24,7 +24,7 @@
 .\"
 .\" $FreeBSD: $
 .\"
-.Dd April 25, 2015
+.Dd April 27, 2015
 .Dt IG4 4
 .Os
 .Sh NAME
@@ -46,12 +46,13 @@ ig4_load="YES"
 .Sh DESCRIPTION
 The
 .Nm
-driver provides access to peripherals attached to a I2C SMB controller over
-SMBus found in fourth Generation Intel(R) Core(TM) Processors based on the
-Mobile U-Processor Line for Intelligent Systems (i7-4650U, i5-4300U,
-i3-4010U, 2980U).
+driver provides access to peripherals attached to an I2C SMB controller.
+.Nm
+supports the SMBus controller found in fourth generation Intel(R) Core(TM)
+processors based on the mobile U-processor line for intelligent systems.
+This includes the i7-4650U, i5-4300U, i3-4010U, and 2980U.
 .Sh SYSCTL VARIABLES
-The following
+These
 .Xr sysctl 8
 variables are available:
 .Bl -tag -width "debug.ig4_dump"
