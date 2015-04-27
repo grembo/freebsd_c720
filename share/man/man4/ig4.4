@@ -24,15 +24,15 @@
 .\"
 .\" $FreeBSD: $
 .\"
-.Dd April 27, 2015
+.Dd April 28, 2015
 .Dt IG4 4
 .Os
 .Sh NAME
 .Nm ig4
-.Nd Intel(R) fourth generation mobile CPUs integrated I2C device, SMBus driver
+.Nd Intel(R) fourth generation mobile CPU integrated I2C SMBus driver
 .Sh SYNOPSIS
 To compile this driver into the kernel, place the following lines into
-your kernel configuration file:
+the kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device ig4"
 .Cd "device smbus"
@@ -57,7 +57,9 @@ These
 variables are available:
 .Bl -tag -width "debug.ig4_dump"
 .It Va debug.ig4_dump
-Setting this to a non-zero value dumps controller registers to console and syslog.
+Setting this to a non-zero value dumps controller registers to console and
+syslog once.
+The sysctl resets to zero immediately.
 .El
 .Sh SEE ALSO
 .Xr cyapa 4 ,
