@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/files.arm64 281497 2015-04-13 16:41:33Z andrew $
+# $FreeBSD: head/sys/conf/files.arm64 282078 2015-04-27 09:12:54Z zbb $
 arm/arm/devmap.c		standard
 arm/arm/generic_timer.c		standard
 arm64/arm64/autoconf.c		standard
@@ -10,6 +10,10 @@ arm64/arm64/clock.c		standard
 arm64/arm64/copyinout.S		standard
 arm64/arm64/copystr.c		standard
 arm64/arm64/cpufunc_asm.S	standard
+arm64/arm64/db_disasm.c		optional	ddb
+arm64/arm64/db_interface.c	optional	ddb
+arm64/arm64/db_trace.c		optional	ddb
+arm64/arm64/debug_monitor.c	optional	kdb
 arm64/arm64/dump_machdep.c	standard
 arm64/arm64/elf_machdep.c	standard
 arm64/arm64/exception.S		standard

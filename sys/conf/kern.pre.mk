@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/kern.pre.mk 281627 2015-04-16 22:34:10Z emaste $
+# $FreeBSD: head/sys/conf/kern.pre.mk 282207 2015-04-28 23:54:55Z imp $
 
 # Part of a unified Makefile for building kernels.  This part contains all
 # of the definitions that need to be before %BEFORE_DEPEND.
@@ -87,7 +87,7 @@ INCLUDES+= -I$S/dev/cxgb -I$S/dev/cxgbe
 
 .endif
 
-CFLAGS=	${COPTFLAGS} ${DEBUG} ${CWARNFLAGS}
+CFLAGS=	${COPTFLAGS} ${DEBUG}
 CFLAGS+= ${INCLUDES} -D_KERNEL -DHAVE_KERNEL_OPTION_HEADERS -include opt_global.h
 CFLAGS_PARAM_INLINE_UNIT_GROWTH?=100
 CFLAGS_PARAM_LARGE_FUNCTION_GROWTH?=1000

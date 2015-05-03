@@ -1,4 +1,6 @@
-# $FreeBSD: head/sys/conf/options.arm64 281494 2015-04-13 14:43:10Z andrew $
+# $FreeBSD: head/sys/conf/options.arm64 282154 2015-04-28 17:02:43Z andrew $
 
 ARM64		opt_global.h
+SOCDEV_PA	opt_global.h
+SOCDEV_VA	opt_global.h
 VFP		opt_global.h

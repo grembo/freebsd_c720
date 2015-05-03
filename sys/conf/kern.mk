@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/kern.mk 280031 2015-03-15 13:31:13Z dim $
+# $FreeBSD: head/sys/conf/kern.mk 282207 2015-04-28 23:54:55Z imp $
 
 #
 # Warning flags for compiling the kernel and components of the kernel:
@@ -187,7 +187,7 @@ CFLAGS+=	-fstack-protector
 CFLAGS+=	-gdwarf-2
 .endif
 
-CFLAGS+= ${CWARNEXTRA} ${CWARNFLAGS} ${CWARNFLAGS.${.IMPSRC:T}}
+CFLAGS+= ${CWARNFLAGS} ${CWARNFLAGS.${.IMPSRC:T}}
 CFLAGS+= ${CFLAGS.${COMPILER_TYPE}} ${CFLAGS.${.IMPSRC:T}}
 
 # Tell bmake not to mistake standard targets for things to be searched for
