@@ -2,7 +2,8 @@
  * Copyright (c) 2014 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
- * by Matthew Dillon <dillon@backplane.com>
+ * by Matthew Dillon <dillon@backplane.com> and was subsequently ported
+ * to FreeBSD by Michael Gmelin <freebsd@grem.de>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,8 +52,6 @@ struct ig4iic_softc {
 	device_t	smb;
 	struct resource	*regs_res;
 	int		regs_rid;
-	bus_space_tag_t regs_t;
-	bus_space_handle_t regs_h;
 	struct resource	*intr_res;
 	int		intr_rid;
 	void		*intr_handle;
@@ -65,7 +64,6 @@ struct ig4iic_softc {
 	int		error;
 	uint8_t		last_slave;
 	int		pci_attached : 1;
-	int		generic_attached : 1;
 	int		use_10bit : 1;
 	int		slave_valid : 1;
 	int		read_started : 1;

@@ -2,7 +2,8 @@
  * Copyright (c) 2014 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
- * by Matthew Dillon <dillon@backplane.com>
+ * by Matthew Dillon <dillon@backplane.com> and was subsequently ported
+ * to FreeBSD by Michael Gmelin <freebsd@grem.de>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -85,7 +86,6 @@ static int
 ig4iic_pci_attach(device_t dev)
 {
 	ig4iic_softc_t *sc = device_get_softc(dev);
-	int msi_enable = 1;
 	int error;
 
 	bzero(sc, sizeof(*sc));
@@ -102,7 +102,7 @@ ig4iic_pci_attach(device_t dev)
 		return (ENXIO);
 	}
 	sc->intr_rid = 0;
-	if (msi_enable && pci_alloc_msi(dev, &sc->intr_rid)) {
+	if (pci_alloc_msi(dev, &sc->intr_rid)) {
 		device_printf(dev, "Using MSI\n");
 	}
 	sc->intr_res = bus_alloc_resource_any(dev, SYS_RES_IRQ,
@@ -112,8 +112,6 @@ ig4iic_pci_attach(device_t dev)
 		ig4iic_pci_detach(dev);
 		return (ENXIO);
 	}
-	sc->regs_t = rman_get_bustag(sc->regs_res);
-	sc->regs_h = rman_get_bushandle(sc->regs_res);
 	sc->pci_attached = 1;
 
 	error = ig4iic_attach(sc);
@@ -148,8 +146,6 @@ ig4iic_pci_detach(device_t dev)
 				     sc->regs_rid, sc->regs_res);
 		sc->regs_res = NULL;
 	}
-	sc->regs_t = 0;
-	sc->regs_h = 0;
 	mtx_destroy(&sc->mutex);
 
 	return (0);

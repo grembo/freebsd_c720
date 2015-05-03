@@ -2,7 +2,8 @@
  * Copyright (c) 2014 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
- * by Matthew Dillon <dillon@backplane.com>
+ * by Matthew Dillon <dillon@backplane.com> and was subsequently ported
+ * to FreeBSD by Michael Gmelin <freebsd@grem.de>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -76,9 +77,8 @@ SYSCTL_INT(_debug, OID_AUTO, ig4_dump, CTLTYPE_INT | CTLFLAG_RW,
 static __inline void
 reg_write(ig4iic_softc_t *sc, uint32_t reg, uint32_t value)
 {
-	bus_space_write_4(sc->regs_t, sc->regs_h, reg, value);
-	bus_space_barrier(sc->regs_t, sc->regs_h, reg, 4,
-			  BUS_SPACE_BARRIER_WRITE);
+	bus_write_4(sc->regs_res, reg, value);
+	bus_barrier(sc->regs_res, reg, 4, BUS_SPACE_BARRIER_WRITE);
 }
 
 static __inline uint32_t
@@ -86,9 +86,8 @@ reg_read(ig4iic_softc_t *sc, uint32_t reg)
 {
 	uint32_t value;
 
-	bus_space_barrier(sc->regs_t, sc->regs_h, reg, 4,
-			  BUS_SPACE_BARRIER_READ);
-	value = bus_space_read_4(sc->regs_t, sc->regs_h, reg);
+	bus_barrier(sc->regs_res, reg, 4, BUS_SPACE_BARRIER_READ);
+	value = bus_read_4(sc->regs_res, reg);
 	return (value);
 }
 
@@ -126,13 +125,10 @@ wait_status(ig4iic_softc_t *sc, uint32_t status)
 	uint32_t v;
 	int error;
 	int txlvl = -1;
-	u_int count;
-	u_int limit;
+	u_int count_us = 0;
+	u_int limit_us = 25000; /* 25ms */
 
 	error = SMB_ETIMEOUT;
-	/* XXX ticks are not very precise, we should fix that */
-	count = ticks;
-	limit = 5; /* XXX:: was 3 */ /* (25000 / tick) + 0.5; */
 
 	for (;;) {
 		/*
@@ -164,14 +160,14 @@ wait_status(ig4iic_softc_t *sc, uint32_t status)
 			v = reg_read(sc, IG4_REG_TXFLR) & IG4_FIFOLVL_MASK;
 			if (txlvl != v) {
 				txlvl = v;
-				count = ticks;
+				count_us = 0;
 			}
 		}
 
 		/*
 		 * Stop if we've run out of time.
 		 */
-		if (ticks - count > limit)
+		if (count_us >= limit_us)
 			break;
 
 		/*
@@ -179,9 +175,12 @@ wait_status(ig4iic_softc_t *sc, uint32_t status)
 		 * work, otherwise poll with the lock held.
 		 */
 		if (status & IG4_STATUS_RX_NOTEMPTY) {
-			mtx_sleep(sc, &sc->mutex, PZERO, "i2cwait", 10); /*(hz + 99) / 100);*/
+			mtx_sleep(sc, &sc->mutex, PZERO, "i2cwait",
+				  (hz + 99) / 100); /* sleep up to 10ms */
+			count_us += 10000;
 		} else {
 			DELAY(25);
+			count_us += 25;
 		}
 	}
 
@@ -475,42 +474,28 @@ ig4iic_attach(ig4iic_softc_t *sc)
 	int error;
 	uint32_t v;
 
-	mtx_lock(&sc->mutex);
-
 	v = reg_read(sc, IG4_REG_COMP_TYPE);
-	device_printf(sc->dev, "type %08x", v);
 	v = reg_read(sc, IG4_REG_COMP_PARAM1);
-	device_printf(sc->dev, " params %08x", v);
 	v = reg_read(sc, IG4_REG_GENERAL);
-	device_printf(sc->dev, " general %08x", v);
 	if ((v & IG4_GENERAL_SWMODE) == 0) {
 		v |= IG4_GENERAL_SWMODE;
 		reg_write(sc, IG4_REG_GENERAL, v);
 		v = reg_read(sc, IG4_REG_GENERAL);
-		device_printf(sc->dev, " (updated %08x)", v);
 	}
 
 	v = reg_read(sc, IG4_REG_SW_LTR_VALUE);
-	device_printf(sc->dev, " swltr %08x", v);
 	v = reg_read(sc, IG4_REG_AUTO_LTR_VALUE);
-	device_printf(sc->dev, " autoltr %08x", v);
 
 	v = reg_read(sc, IG4_REG_COMP_VER);
-	device_printf(sc->dev, " version %08x\n", v);
 	if (v != IG4_COMP_VER) {
 		error = ENXIO;
 		goto done;
 	}
 	v = reg_read(sc, IG4_REG_SS_SCL_HCNT);
-	device_printf(sc->dev, "SS_SCL_HCNT=%08x", v);
 	v = reg_read(sc, IG4_REG_SS_SCL_LCNT);
-	device_printf(sc->dev, " LCNT=%08x", v);
 	v = reg_read(sc, IG4_REG_FS_SCL_HCNT);
-	device_printf(sc->dev, " FS_SCL_HCNT=%08x", v);
 	v = reg_read(sc, IG4_REG_FS_SCL_LCNT);
-	device_printf(sc->dev, " LCNT=%08x\n", v);
 	v = reg_read(sc, IG4_REG_SDA_HOLD);
-	device_printf(sc->dev, "HOLD        %08x\n", v);
 
 	v = reg_read(sc, IG4_REG_SS_SCL_HCNT);
 	reg_write(sc, IG4_REG_FS_SCL_HCNT, v);
@@ -562,6 +547,7 @@ ig4iic_attach(ig4iic_softc_t *sc)
 	 */
 	reg_write(sc, IG4_REG_INTR_MASK, IG4_INTR_STOP_DET |
 					 IG4_INTR_RX_FULL);
+	mtx_lock(&sc->mutex);
 	if (set_controller(sc, 0))
 		device_printf(sc->dev, "controller error during attach-1\n");
 	if (set_controller(sc, IG4_I2C_ENABLE))
@@ -569,11 +555,9 @@ ig4iic_attach(ig4iic_softc_t *sc)
 	mtx_unlock(&sc->mutex);
 	error = bus_setup_intr(sc->dev, sc->intr_res, INTR_TYPE_MISC | INTR_MPSAFE,
 			       NULL, ig4iic_intr, sc, &sc->intr_handle);
-	mtx_lock(&sc->mutex);
 	if (error) {
 		device_printf(sc->dev,
 			      "Unable to setup irq: error %d\n", error);
-		goto done;
 	}
 
 	sc->enum_hook.ich_func = ig4iic_start;
@@ -582,16 +566,12 @@ ig4iic_attach(ig4iic_softc_t *sc)
 	/* We have to wait until interrupts are enabled. I2C read and write
 	 * only works if the interrupts are available.
 	 */
-	mtx_unlock(&sc->mutex);
 	if (config_intrhook_establish(&sc->enum_hook) != 0)
 		error = ENOMEM;
 	else
 		error = 0;
 
-	mtx_lock(&sc->mutex);
-
 done:
-	mtx_unlock(&sc->mutex);
 	return (error);
 }
 
@@ -608,16 +588,10 @@ ig4iic_start(void *xdev)
 
 	/* Attach us to the smbus */
 	error = bus_generic_attach(sc->dev);
-	mtx_lock(&sc->mutex);
 	if (error) {
 		device_printf(sc->dev,
 			      "failed to attach child: error %d\n", error);
-		goto done;
 	}
-	sc->generic_attached = 1;
-
-done:
-	mtx_unlock(&sc->mutex);
 }
 
 
@@ -627,31 +601,25 @@ ig4iic_detach(ig4iic_softc_t *sc)
 {
 	int error;
 
+	error = bus_generic_detach(sc->dev);
+	if (error)
+		return (error);
+
+	if (sc->smb)
+		device_delete_child(sc->dev, sc->smb);
+	if (sc->intr_handle)
+		bus_teardown_intr(sc->dev, sc->intr_res, sc->intr_handle);
+
 	mtx_lock(&sc->mutex);
 
+	sc->smb = NULL;
+	sc->intr_handle = NULL;
 	reg_write(sc, IG4_REG_INTR_MASK, 0);
 	reg_read(sc, IG4_REG_CLR_INTR);
 	set_controller(sc, 0);
 
-	if (sc->generic_attached) {
-		error = bus_generic_detach(sc->dev);
-		if (error)
-			goto done;
-		sc->generic_attached = 0;
-	}
-	if (sc->smb) {
-		device_delete_child(sc->dev, sc->smb);
-		sc->smb = NULL;
-	}
-	if (sc->intr_handle) {
-		bus_teardown_intr(sc->dev, sc->intr_res, sc->intr_handle);
-		sc->intr_handle = NULL;
-	}
-
-	error = 0;
-done:
 	mtx_unlock(&sc->mutex);
-	return (error);
+	return (0);
 }
 
 int
