@@ -601,10 +601,11 @@ ig4iic_detach(ig4iic_softc_t *sc)
 {
 	int error;
 
-	error = bus_generic_detach(sc->dev);
-	if (error)
-		return (error);
-
+	if (device_is_attached(sc->dev)) {
+		error = bus_generic_detach(sc->dev);
+		if (error)
+			return (error);
+	}
 	if (sc->smb)
 		device_delete_child(sc->dev, sc->smb);
 	if (sc->intr_handle)
