@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
-# $FreeBSD: head/share/man/man4/Makefile 281705 2015-04-18 21:00:36Z markj $
+# $FreeBSD: head/share/man/man4/Makefile 283766 2015-05-30 12:17:18Z grembo $
 
 .include <src.opts.mk>
 
