@@ -133,7 +133,7 @@ __FBSDID("$FreeBSD: $");
 #define CYAPA_BUFSIZE	128			/* power of 2 */
 #define CYAPA_BUFMASK	(CYAPA_BUFSIZE - 1)
 
-#define ZSCALE		15 // was 10
+#define ZSCALE		15
 
 #define TIME_TO_IDLE	(hz * 10)
 #define TIME_TO_RESET	(hz * 3)
