@@ -142,10 +142,6 @@ static driver_t isl_driver = {
 	sizeof(struct isl_softc),
 };
 
-static struct cdevsw isl_cdevsw = {
-	.d_version =	D_VERSION
-};
-
 static int
 isl_probe(device_t dev)
 {
