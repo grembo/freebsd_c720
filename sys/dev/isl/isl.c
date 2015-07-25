@@ -111,7 +111,7 @@ init_device(device_t dev, int addr, int probe)
 	if (error)
 		goto done;
 
-	pause("islinit", hz);
+	pause("islinit", hz/100);
 
 done:
 	if (error)

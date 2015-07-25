@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
-# $FreeBSD: head/share/man/man4/Makefile 285858 2015-07-24 21:48:53Z brueffer $
+# $FreeBSD: head/share/man/man4/Makefile 285876 2015-07-25 18:14:35Z grembo $
 
 .include <src.opts.mk>
 
@@ -108,6 +108,7 @@ MAN=	aac.4 \
 	cxgbe.4 \
 	cyapa.4 \
 	cy.4 \
+	cyapa.4 \
 	da.4 \
 	dc.4 \
 	dcons.4 \
