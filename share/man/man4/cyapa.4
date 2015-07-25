@@ -192,3 +192,9 @@ by
 .Pp
 This manual page was written by
 .An Michael Gmelin Aq Mt freebsd@grem.de .
+.Sh BUGS
+The
+.Nm
+driver detects the device based on its I2C address (0x67).
+This might have unforeseen consequences if the initialization sequence
+is sent to an unknown device at that address.
