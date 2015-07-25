@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
-# $FreeBSD: head/share/man/man4/Makefile 283766 2015-05-30 12:17:18Z grembo $
+# $FreeBSD: head/share/man/man4/Makefile 285858 2015-07-24 21:48:53Z brueffer $
 
 .include <src.opts.mk>
 
@@ -366,6 +366,7 @@ MAN=	aac.4 \
 	nsp.4 \
 	${_ntb.4} \
 	null.4 \
+	numa.4 \
 	${_nvd.4} \
 	${_nvme.4} \
 	${_nvram.4} \
@@ -389,6 +390,7 @@ MAN=	aac.4 \
 	${_pflog.4} \
 	${_pfsync.4} \
 	pim.4 \
+	pms.4 \
 	polling.4 \
 	ppbus.4 \
 	ppc.4 \
@@ -822,12 +824,12 @@ _ccd.4=		ccd.4
 .endif
 
 .if ${MK_CDDL} != "no"
-_dtrace_io.4=	dtrace-io.4
-_dtrace_ip.4=	dtrace-ip.4
-_dtrace_proc.4=	dtrace-proc.4
-_dtrace_sched.4= dtrace-sched.4
-_dtrace_tcp.4=	dtrace-tcp.4
-_dtrace_udp.4=	dtrace-udp.4
+_dtrace_io.4=	dtrace_io.4
+_dtrace_ip.4=	dtrace_ip.4
+_dtrace_proc.4=	dtrace_proc.4
+_dtrace_sched.4= dtrace_sched.4
+_dtrace_tcp.4=	dtrace_tcp.4
+_dtrace_udp.4=	dtrace_udp.4
 .endif
 
 .if ${MK_ISCSI} != "no"
@@ -871,6 +873,7 @@ MAN+=	\
 	ufoma.4 \
 	uftdi.4 \
 	ugen.4 \
+	ugold.4 \
 	uhci.4 \
 	uhid.4 \
 	uhso.4 \

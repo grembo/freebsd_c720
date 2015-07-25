@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/dwc_otgreg.h 279210 2015-02-23 17:01:38Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/dwc_otgreg.h 285638 2015-07-16 16:08:40Z hselasky $ */
 
 /*-
  * Copyright (c) 2010,2011 Aleksandr Rybalko. All rights reserved.
@@ -47,6 +47,8 @@
 #define	DOTG_GGPIO		0x0038
 #define	DOTG_GUID		0x003C
 #define	DOTG_GSNPSID		0x0040
+#define	DOTG_GSNPSID_REV_2_80a	0x4f54280a	/* RPi model B/RPi2 */
+#define	DOTG_GSNPSID_REV_3_10a	0x4f54310a	/* ODROID-C1 */
 #define	DOTG_GHWCFG1		0x0044
 #define	DOTG_GHWCFG2		0x0048
 #define	DOTG_GHWCFG3		0x004C

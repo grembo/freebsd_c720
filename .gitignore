@@ -97,6 +97,7 @@
 /rescue
 /sbin
 /secure
+/targets
 /tests
 /tools
 /usr.bin
