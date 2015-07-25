@@ -75,9 +75,8 @@ struct isl_softc {
 	int		addr;
 
 	struct sx	isl_sx;
-	struct cdev*	devnode;
-	struct sysctl_ctx_list* sysctl_ctx;
-	struct sysctl_oid* sysctl_tree;
+	struct sysctl_ctx_list *sysctl_ctx;
+	struct sysctl_oid *sysctl_tree;
 };
 
 /* Returns < 0 on problem. */
@@ -244,12 +243,6 @@ isl_attach(device_t dev)
 	    sc, ISL_METHOD_RANGE, isl_sysctl, "I",
 	    "Current proximity sensor range");
 
-        /* XXX: /dev/isl doesn't do anything useful yet */
-	sc->devnode = make_dev(&isl_cdevsw, unit,
-		UID_ROOT, GID_WHEEL, 0600, "isl%d", unit);
-
-	sc->devnode->si_drv1 = sc;
-
 	return (0);
 }
 
@@ -259,7 +252,6 @@ isl_detach(device_t dev)
 	struct isl_softc *sc;
 
 	sc = device_get_softc(dev);
-	destroy_dev(sc->devnode);
 	sx_destroy(&sc->isl_sx);
 
 	return (0);
