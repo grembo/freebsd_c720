@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2014 Michael Gmelin <freebsd@grem.de>
+ * Copyright (c) 2015 Michael Gmelin <freebsd@grem.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,43 +37,31 @@ __FBSDID("$FreeBSD: $");
  */
 
 #include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/sysctl.h>
-#include <sys/mbuf.h>
-#include <sys/malloc.h>
-#include <sys/lock.h>
-#include <sys/lockmgr.h>
-#include <sys/mutex.h>
-#include <sys/kernel.h>
-#include <sys/systm.h>
-#include <sys/module.h>
-#include <sys/selinfo.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
-#include <sys/uio.h>
-#include <sys/fcntl.h>
-#include <sys/kthread.h>
-#include <sys/poll.h>
-#include <sys/vnode.h>
 #include <sys/event.h>
-/* #include <sys/fs/devfs.h> */
+#include <sys/fcntl.h>
+#include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/lockmgr.h>
+#include <sys/malloc.h>
+#include <sys/mbuf.h>
+#include <sys/module.h>
+#include <sys/poll.h>
+#include <sys/sx.h>
+#include <sys/sysctl.h>
+#include <sys/systm.h>
+#include <sys/systm.h>
+#include <sys/uio.h>
+#include <sys/vnode.h>
 
 #include <dev/smbus/smbconf.h>
 #include <dev/smbus/smbus.h>
-#include "isl.h"
+#include <dev/isl/isl.h>
 
 #include "smbus_if.h"
 #include "bus_if.h"
 #include "device_if.h"
-
-#define ISL_BUFSIZE	128			/* power of 2 */
-#define ISL_BUFMASK	(ISL_BUFSIZE - 1)
-
-#define ZSCALE		10
-
-#define HZ_BASE		100
-#define TIME_TO_IDLE	(HZ_BASE * 10)
-#define TIME_TO_RESET	(HZ_BASE * 3)
 
 #define ISL_METHOD_ALS		0x10
 #define ISL_METHOD_IR		0x11
@@ -82,28 +70,18 @@ __FBSDID("$FreeBSD: $");
 #define ISL_METHOD_RANGE	0x14
 
 struct isl_softc {
-	device_t dev;
-	int	count;			/* >0 if device opened */
-	int	unit;
-	int	addr;
-	struct cdev* devnode;
-	struct selinfo selinfo;
-	struct mtx mutex;
+	device_t	dev;
+	int		unit;
+	int		addr;
 
-	int	poll_flags;
-	struct 	proc *isl_kthread;
-	struct 	sysctl_ctx_list  *sysctl_ctx;
-	struct 	sysctl_oid       *sysctl_tree;
+	struct sx	isl_sx;
+	struct cdev*	devnode;
+	struct sysctl_ctx_list* sysctl_ctx;
+	struct sysctl_oid* sysctl_tree;
 };
 
-static int isl_read_sensor(device_t dev, int addr, uint8_t cmd_mask); // returns < 0 on problem
-
-static int isl_debug = 0;
-SYSCTL_INT(_debug, OID_AUTO, isl_debug, CTLFLAG_RW,
-		&isl_debug, 0, "");
-static int isl_reset = 0;
-SYSCTL_INT(_debug, OID_AUTO, isl_reset, CTLFLAG_RW,
-		&isl_reset, 0, "");
+/* Returns < 0 on problem. */
+static int isl_read_sensor(device_t dev, int addr, uint8_t cmd_mask);
 
 /*
  * Initialize the device
@@ -116,7 +94,7 @@ init_device(device_t dev, int addr, int probe)
 
 	device_t bus;
 	int error;
-	
+
 	bus = device_get_parent(dev);	/* smbus */
 
 	/*
@@ -134,12 +112,12 @@ init_device(device_t dev, int addr, int probe)
 	if (error)
 		goto done;
 
-	pause("islinit", hz); ///1000 + 1);
+	pause("islinit", hz);
 
 done:
 	if (error)
 		device_printf(dev, "Unable to initialize\n");
-	return error;
+	return (error);
 }
 
 static int isl_probe(device_t);
@@ -166,43 +144,27 @@ static driver_t isl_driver = {
 };
 
 static struct cdevsw isl_cdevsw = {
-	.d_version =	D_VERSION,
-//	.d_close =	islclose,
-//	.d_ioctl =	islioctl,
-//	.d_read =	islread,
-//	.d_write =	islwrite,
-//	.d_kqfilter =	islkqfilter,
-//	.d_poll =	islpoll,
+	.d_version =	D_VERSION
 };
 
 static int
 isl_probe(device_t dev)
 {
-	device_t bus;
 	int unit;
 	int addr;
 	int error;
-	int dummy = 0;
 
-	bus = device_get_parent(dev);	/* smbus */
-
-	if (!bus)
-	    return (ENXIO);
-	
 	addr = smbus_get_addr(dev);
-	
+
 	/*
-	 * Only match against specific addresses to avoid blowing up
-	 * other I2C devices (?).  At least for now.
-	 *	
 	 * 0x44 - isl ambient light sensor on the acer c720.
+	 * (other devices might use other ids).
 	 */
 	if (addr != 0x44)
 		return (ENXIO);
 
 	unit = device_get_unit(dev);
-	tsleep(&dummy, 0, "cyastab", hz);
-	//addr = unit & 0x3FF;
+
 	error = init_device(dev, addr, 1);
 	if (error)
 		return (ENXIO);
@@ -215,30 +177,25 @@ isl_probe(device_t dev)
 static int
 isl_attach(device_t dev)
 {
-	struct isl_softc *sc = (struct isl_softc *)device_get_softc(dev);
-	unsigned char* addr_ptr;
+	struct isl_softc *sc;
 	int unit;
 	int addr;
-	
+	int use_als;
+	int use_ir;
+	int use_prox;
+
+	sc = device_get_softc(dev);
+
 	if (!sc)
-		return ENOMEM;
-
-	bzero(sc, sizeof(struct isl_softc *));
-
-	mtx_init(&sc->mutex, "isl", NULL, MTX_DEF);
+		return (ENOMEM);
 
 	unit = device_get_unit(dev);
-	addr_ptr = device_get_ivars(dev);
-	
-	if (!addr_ptr) {
-	    printf("No address ptr set\n");
-	    return (ENXIO);
-	}
-	
-	addr = *addr_ptr;
+	addr = *((unsigned char*) device_get_ivars(dev));
 
 	if (init_device(dev, addr, 0))
-		return ENXIO;
+		return (ENXIO);
+
+	sx_init(&sc->isl_sx, "ISL read lock");
 
 	sc->dev = dev;
 	sc->unit = unit;
@@ -247,47 +204,51 @@ isl_attach(device_t dev)
 	sc->sysctl_ctx = device_get_sysctl_ctx(dev);
 	sc->sysctl_tree = device_get_sysctl_tree(dev);
 
-	if (isl_read_sensor(dev, addr, CMD1_MASK_ALS_ONCE) >= 0) {
-	    SYSCTL_ADD_PROC(sc->sysctl_ctx,
-	    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
-		"als", CTLTYPE_INT | CTLFLAG_RD,
-		sc, ISL_METHOD_ALS, isl_sysctl, "I",
-		"Current ALS sensor read-out");
+	use_als = isl_read_sensor(dev, addr, CMD1_MASK_ALS_ONCE) >= 0;
+	use_ir = isl_read_sensor(dev, addr, CMD1_MASK_IR_ONCE) >= 0;
+	use_prox = isl_read_sensor(dev, addr, CMD1_MASK_PROX_ONCE) >= 0;
+
+	if (use_als) {
+		SYSCTL_ADD_PROC(sc->sysctl_ctx,
+	 		SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
+			    "als", CTLTYPE_INT | CTLFLAG_RD,
+			    sc, ISL_METHOD_ALS, isl_sysctl, "I",
+			    "Current ALS sensor read-out");
 	}
 
-	if (isl_read_sensor(dev, addr, CMD1_MASK_IR_ONCE) >= 0) {
-	    SYSCTL_ADD_PROC(sc->sysctl_ctx,
-	    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
-		"ir", CTLTYPE_INT | CTLFLAG_RD,
-		sc, ISL_METHOD_IR, isl_sysctl, "I",
-		"Current IR sensor read-out");
+	if (use_ir) {
+		SYSCTL_ADD_PROC(sc->sysctl_ctx,
+			SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
+			    "ir", CTLTYPE_INT | CTLFLAG_RD,
+			    sc, ISL_METHOD_IR, isl_sysctl, "I",
+			    "Current IR sensor read-out");
 	}
 
-	if (isl_read_sensor(dev, addr, CMD1_MASK_PROX_ONCE) >= 0) {
-	    SYSCTL_ADD_PROC(sc->sysctl_ctx,
-	    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
-		"prox", CTLTYPE_INT | CTLFLAG_RD,
-		sc, ISL_METHOD_PROX, isl_sysctl, "I",
-		"Current proximity sensor read-out");
+	if (use_prox) {
+		SYSCTL_ADD_PROC(sc->sysctl_ctx,
+			SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
+			    "prox", CTLTYPE_INT | CTLFLAG_RD,
+			    sc, ISL_METHOD_PROX, isl_sysctl, "I",
+			    "Current proximity sensor read-out");
 	}
 
 	SYSCTL_ADD_PROC(sc->sysctl_ctx,
-	SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
-	     "resolution", CTLTYPE_INT | CTLFLAG_RD,
-	     sc, ISL_METHOD_RESOLUTION, isl_sysctl, "I",
-	     "Current proximity sensor resolution");
+		SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
+		    "resolution", CTLTYPE_INT | CTLFLAG_RD,
+		    sc, ISL_METHOD_RESOLUTION, isl_sysctl, "I",
+		    "Current proximity sensor resolution");
 
 	SYSCTL_ADD_PROC(sc->sysctl_ctx,
 	SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
-	     "range", CTLTYPE_INT | CTLFLAG_RD,
-	     sc, ISL_METHOD_RANGE, isl_sysctl, "I",
-	     "Current proximity sensor range");
+	    "range", CTLTYPE_INT | CTLFLAG_RD,
+	    sc, ISL_METHOD_RANGE, isl_sysctl, "I",
+	    "Current proximity sensor range");
 
+        /* XXX: /dev/isl doesn't do anything useful yet */
 	sc->devnode = make_dev(&isl_cdevsw, unit,
 		UID_ROOT, GID_WHEEL, 0600, "isl%d", unit);
 
 	sc->devnode->si_drv1 = sc;
-	knlist_init_mtx(&sc->selinfo.si_note, NULL);
 
 	return (0);
 }
@@ -295,16 +256,11 @@ isl_attach(device_t dev)
 static int
 isl_detach(device_t dev)
 {
-	struct isl_softc *sc = (struct isl_softc *)device_get_softc(dev);
+	struct isl_softc *sc;
 
-	if (sc->devnode)
-		destroy_dev(sc->devnode);
-
-	knlist_clear(&sc->selinfo.si_note, 0);
-	seldrain(&sc->selinfo);
-	knlist_destroy(&sc->selinfo.si_note);
-
-	mtx_destroy(&sc->mutex);
+	sc = device_get_softc(dev);
+	destroy_dev(sc->devnode);
+	sx_destroy(&sc->isl_sx);
 
 	return (0);
 }
@@ -312,34 +268,43 @@ isl_detach(device_t dev)
 static int
 isl_sysctl(SYSCTL_HANDLER_ARGS)
 {
-	struct isl_softc *sc = (struct isl_softc *)oidp->oid_arg1;
-	device_t bus; 
-	uint8_t rbyte;
-	int arg = -1;
 	static int resolutions[] = { 16, 12, 8, 4};
 	static int ranges[] = { 1000, 4000, 16000, 64000};
+
+	struct isl_softc *sc;
+	device_t bus;
+	uint8_t rbyte;
+	int arg;
 	int resolution;
 	int range;
-	
-	bus  = device_get_parent(sc->dev);	/* smbus */
+
+	sc = (struct isl_softc *)oidp->oid_arg1;
+	arg = -1;
+
+	sx_xlock(&sc->isl_sx);
+	bus = device_get_parent(sc->dev);	/* smbus */
 	if (smbus_trans(bus, sc->addr, REG_CMD2,
-		 SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
-		 NULL, 0, &rbyte, sizeof(rbyte), NULL)) {
-	    return -1;
+	    SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
+	    NULL, 0, &rbyte, sizeof(rbyte), NULL)) {
+		sx_xunlock(&sc->isl_sx);
+		return (-1);
 	}
-	resolution = resolutions[(rbyte & CMD2_MASK_RESOLUTION) >> CMD2_SHIFT_RESOLUTION];
+	resolution = resolutions[(rbyte & CMD2_MASK_RESOLUTION)
+			    >> CMD2_SHIFT_RESOLUTION];
 	range = ranges[(rbyte & CMD2_MASK_RANGE) >> CMD2_SHIFT_RANGE];
 
 	switch (oidp->oid_arg2) {
-
 	case ISL_METHOD_ALS:
-		arg = (isl_read_sensor(sc->dev, sc->addr, CMD1_MASK_ALS_ONCE) * range) >> resolution;
+		arg = (isl_read_sensor(sc->dev, sc->addr,
+		    CMD1_MASK_ALS_ONCE) * range) >> resolution;
 		break;
 	case ISL_METHOD_IR:
-		arg = isl_read_sensor(sc->dev, sc->addr, CMD1_MASK_IR_ONCE);
+		arg = isl_read_sensor(sc->dev, sc->addr,
+		    CMD1_MASK_IR_ONCE);
 		break;
 	case ISL_METHOD_PROX:
-		arg = isl_read_sensor(sc->dev, sc->addr, CMD1_MASK_PROX_ONCE);
+		arg = isl_read_sensor(sc->dev, sc->addr,
+		    CMD1_MASK_PROX_ONCE);
 		break;
 	case ISL_METHOD_RESOLUTION:
 		arg = (1 << resolution);
@@ -348,57 +313,58 @@ isl_sysctl(SYSCTL_HANDLER_ARGS)
 		arg = range;
 		break;
 	}
+	sx_xunlock(&sc->isl_sx);
 
 	SYSCTL_OUT(req, &arg, sizeof(arg));
-	return 0;
+	return (0);
 }
 
 static int isl_read_sensor(device_t dev, int addr, uint8_t cmd_mask)
 {
-	device_t bus; 
+	device_t bus;
 	uint8_t rbyte;
 	uint8_t cmd;
 	int ret;
 
-	bus  = device_get_parent(dev);	/* smbus */
+	bus = device_get_parent(dev);	/* smbus */
 
 	if (smbus_trans(bus, addr, REG_CMD1,
-			 SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
-			 NULL, 0, &rbyte, sizeof(rbyte), NULL)) {
-	    device_printf(dev, "Couldn't read first byte before issuing command %d\n", cmd_mask);
-	    return -1;
+	    SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
+	    NULL, 0, &rbyte, sizeof(rbyte), NULL)) {
+		device_printf(dev,
+		    "Couldn't read first byte before issuing command %d\n",
+		    cmd_mask);
+		return (-1);
 	}
 
 	cmd = (rbyte & 0x1f) | cmd_mask;
-	//device_printf(dev, "Sending command %d\n", cmd);
 	if (smbus_trans(bus, addr, REG_CMD1,
-			SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
-			&cmd, sizeof(cmd), NULL, 0, NULL)) {
-	    device_printf(dev, "Couldn't write command %d\n", cmd_mask);
-	    return -1;		
+	    SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
+	    &cmd, sizeof(cmd), NULL, 0, NULL)) {
+		device_printf(dev, "Couldn't write command %d\n", cmd_mask);
+		return (-1);
 	}
 
-	pause("ilsconv", hz/10);
+	pause("islconv", hz/10);
 
 	if (smbus_trans(bus, addr, REG_DATA1,
-			 SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
-			 NULL, 0, &rbyte, sizeof(rbyte), NULL)) {
-	    device_printf(dev, "Couldn't read first byte after command %d\n", cmd_mask);
-	    return -1;
+	    SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
+	    NULL, 0, &rbyte, sizeof(rbyte), NULL)) {
+		device_printf(dev,
+		    "Couldn't read first byte after command %d\n", cmd_mask);
+		return (-1);
 	}
 
 	ret = rbyte;
-	
 	if (smbus_trans(bus, addr, REG_DATA2,
-			 SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
-			 NULL, 0, &rbyte, sizeof(rbyte), NULL)) {
-	    device_printf(dev, "Couldn't read second byte after command %d\n", cmd_mask);
-	    return -1;
+	    SMB_TRANS_NOCNT | SMB_TRANS_7BIT,
+	    NULL, 0, &rbyte, sizeof(rbyte), NULL)) {
+		device_printf(dev, "Couldn't read second byte after command %d\n", cmd_mask);
+		return (-1);
 	}
-
 	ret += rbyte << 8;
 
-	return ret;
+	return (ret);
 }
 
 DRIVER_MODULE(isl, smbus, isl_driver, isl_devclass, NULL, NULL);

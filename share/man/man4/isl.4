@@ -24,7 +24,7 @@
 .\"
 .\" $FreeBSD: $
 .\"
-.Dd January 4, 2015
+.Dd July 25, 2015
 .Dt ISL 4
 .Os
 .Sh NAME
@@ -32,7 +32,7 @@
 .Nd Intersil(TM) I2C ISL29018 sensor driver
 .Sh SYNOPSIS
 To compile this driver into the kernel, place the following lines into
-your kernel configuration file:
+the kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device isl"
 .Cd "device ig4"
@@ -50,7 +50,8 @@ The
 .Nm
 driver provides access to sensor data provided by the Intersil(TM) I2C
 ISL29018 Digital Ambient Light Sensor and Proximity Sensor with Interrupt
-Function. Functionality is basic and provided over the
+Function.
+Functionality is basic and provided through the
 .Xr sysctl 8
 interface.
 .Sh SYSCTL VARIABLES
@@ -69,6 +70,20 @@ Current sensor resolution.
 .It Va dev.isl.X.range
 Current sensor range.
 .El
+.Sh EXAMPLES
+.Ss Ambient light sensor read out
+.Bd -literal
+$ sysctl dev.isl.0.als
+dev.isl.0.als: 64
+.Ed
+.Ss Automatically adjust brightness
+This requires the port
+.Pa graphics/intel-backlight
+and only works with laptops using a supported Intel(R) GPU.
+.Bd -literal
+$ pkg install intel-backlight
+$ sh /usr/local/share/examples/intel-backlight/isl_backlight.sh
+.Ed
 .Sh SEE ALSO
 .Xr ig4 4 ,
 .Xr smbus 4
