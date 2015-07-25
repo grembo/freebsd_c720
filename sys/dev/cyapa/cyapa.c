@@ -210,17 +210,22 @@ struct cyapa_cdevpriv {
 #define CYPOLL_SHUTDOWN	0x0001
 
 static void cyapa_poll_thread(void *arg);
-static int cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs, int freq);
+static int cyapa_raw_input(struct cyapa_softc *sc, struct cyapa_regs *regs,
+    int freq);
 static void cyapa_set_power_mode(struct cyapa_softc *sc, int mode);
 
-static int fifo_empty(struct cyapa_fifo *fifo);
-static size_t fifo_ready(struct cyapa_fifo *fifo);
-static char *fifo_read(struct cyapa_fifo *fifo, size_t n);
-static char *fifo_write(struct cyapa_fifo *fifo, size_t n);
-static uint8_t fifo_read_char(struct cyapa_fifo *fifo);
-static void fifo_write_char(struct cyapa_fifo *fifo, uint8_t c);
-static size_t fifo_space(struct cyapa_fifo *fifo);
-static void fifo_reset(struct cyapa_fifo *fifo);
+static int fifo_empty(struct cyapa_softc *sc, struct cyapa_fifo *fifo);
+static size_t fifo_ready(struct cyapa_softc *sc, struct cyapa_fifo *fifo);
+static char *fifo_read(struct cyapa_softc *sc, struct cyapa_fifo *fifo,
+    size_t n);
+static char *fifo_write(struct cyapa_softc *sc, struct cyapa_fifo *fifo,
+    size_t n);
+static uint8_t fifo_read_char(struct cyapa_softc *sc,
+    struct cyapa_fifo *fifo);
+static void fifo_write_char(struct cyapa_softc *sc, struct cyapa_fifo *fifo,
+    uint8_t c);
+static size_t fifo_space(struct cyapa_softc *sc, struct cyapa_fifo *fifo);
+static void fifo_reset(struct cyapa_softc *sc, struct cyapa_fifo *fifo);
 
 static int cyapa_fuzz(int delta, int *fuzz);
 
@@ -295,7 +300,7 @@ cyapa_notify(struct cyapa_softc *sc)
 
 	CYAPA_LOCK_ASSERT(sc);
 
-	if (sc->data_signal || !fifo_empty(&sc->rfifo)) {
+	if (sc->data_signal || !fifo_empty(sc, &sc->rfifo)) {
 		KNOTE_LOCKED(&sc->selinfo.si_note, 0);
 		if (sc->blocked || sc->isselect) {
 			if (sc->blocked) {
@@ -617,7 +622,7 @@ cyaparead(struct cdev *dev, struct uio *uio, int ioflag)
 	/* If buffer is empty, load a new event if it is ready */
 	cyapa_lock(sc);
 again:
-	if (fifo_empty(&sc->rfifo) &&
+	if (fifo_empty(sc, &sc->rfifo) &&
 	    (sc->data_signal || sc->delta_x || sc->delta_y ||
 	     sc->track_but != sc->reported_but)) {
 		uint8_t c0;
@@ -689,13 +694,13 @@ again:
 		if (but & CYAPA_FNGR_RIGHT)
 			c0 |= 0x02;
 
-		fifo_write_char(&sc->rfifo, c0);
-		fifo_write_char(&sc->rfifo, (uint8_t)delta_x);
-		fifo_write_char(&sc->rfifo, (uint8_t)delta_y);
+		fifo_write_char(sc, &sc->rfifo, c0);
+		fifo_write_char(sc, &sc->rfifo, (uint8_t)delta_x);
+		fifo_write_char(sc, &sc->rfifo, (uint8_t)delta_y);
 		switch(sc->zenabled) {
 		case 1:
 			/* Z axis all 8 bits */
-			fifo_write_char(&sc->rfifo, (uint8_t)delta_z);
+			fifo_write_char(sc, &sc->rfifo, (uint8_t)delta_z);
 			break;
 		case 2:
 			/*
@@ -707,7 +712,7 @@ again:
 			while (delta_z > 7 || delta_z < -8)
 				delta_z >>= 1;
 			c0 = (uint8_t)delta_z & 0x0F;
-			fifo_write_char(&sc->rfifo, c0);
+			fifo_write_char(sc, &sc->rfifo, c0);
 			break;
 		default:
 			/* basic PS/2 */
@@ -720,7 +725,7 @@ again:
 	error = 0;
 	didread = (uio->uio_resid == 0);
 
-	while ((ioflag & IO_NDELAY) == 0 && fifo_empty(&sc->rfifo)) {
+	while ((ioflag & IO_NDELAY) == 0 && fifo_empty(sc, &sc->rfifo)) {
 		if (sc->data_signal)
 			goto again;
 		sc->blocked = 1;
@@ -731,16 +736,16 @@ again:
 
 	/* Return any buffered data */
 	while (error == 0 && uio->uio_resid &&
-	    (n = fifo_ready(&sc->rfifo)) > 0) {
+	    (n = fifo_ready(sc, &sc->rfifo)) > 0) {
 		if (n > uio->uio_resid)
 			n = uio->uio_resid;
-		ptr = fifo_read(&sc->rfifo, 0);
+		ptr = fifo_read(sc, &sc->rfifo, 0);
 		cyapa_unlock(sc);
 		error = uiomove(ptr, n, uio);
 		cyapa_lock(sc);
 		if (error)
 			break;
-		fifo_read(&sc->rfifo, n);
+		fifo_read(sc, &sc->rfifo, n);
 		didread = 1;
 	}
 	cyapa_unlock(sc);
@@ -768,46 +773,46 @@ again:
 	 * of the fifo and keep filling.
 	 */
 	cyapa_lock(sc);
-	while ((n = fifo_space(&sc->wfifo)) > 0 && uio->uio_resid) {
+	while ((n = fifo_space(sc, &sc->wfifo)) > 0 && uio->uio_resid) {
 		if (n > uio->uio_resid)
 			n = uio->uio_resid;
-		ptr = fifo_write(&sc->wfifo, 0);
+		ptr = fifo_write(sc, &sc->wfifo, 0);
 		cyapa_unlock(sc);
 		error = uiomove(ptr, n, uio);
 		cyapa_lock(sc);
 		if (error)
 			break;
-		fifo_write(&sc->wfifo, n);
+		fifo_write(sc, &sc->wfifo, n);
 	}
 
 	/* Handle commands */
-	cmd_completed = (fifo_ready(&sc->wfifo) != 0);
-	while (fifo_ready(&sc->wfifo) && cmd_completed && error == 0) {
+	cmd_completed = (fifo_ready(sc, &sc->wfifo) != 0);
+	while (fifo_ready(sc, &sc->wfifo) && cmd_completed && error == 0) {
 		if (sc->ps2_cmd == 0)
-			sc->ps2_cmd = fifo_read_char(&sc->wfifo);
+			sc->ps2_cmd = fifo_read_char(sc, &sc->wfifo);
 		switch(sc->ps2_cmd) {
 		case 0xE6:
 			/* SET SCALING 1:1 */
 			sc->scaling_mode = 0;
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			break;
 		case 0xE7:
 			/* SET SCALING 2:1 */
 			sc->scaling_mode = 1;
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			break;
 		case 0xE8:
 			/* SET RESOLUTION +1 byte */
 			if (sc->ps2_acked == 0) {
 				sc->ps2_acked = 1;
-				fifo_write_char(&sc->rfifo, 0xFA);
+				fifo_write_char(sc, &sc->rfifo, 0xFA);
 			}
-			if (fifo_ready(&sc->wfifo) == 0) {
+			if (fifo_ready(sc, &sc->wfifo) == 0) {
 				cmd_completed = 0;
 				break;
 			}
-			sc->mode.resolution = fifo_read_char(&sc->wfifo);
-			fifo_write_char(&sc->rfifo, 0xFA);
+			sc->mode.resolution = fifo_read_char(sc, &sc->wfifo);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			break;
 		case 0xE9:
 			/*
@@ -839,15 +844,15 @@ again:
 				c0 |= 0x02;
 			if (sc->track_but & CYAPA_FNGR_RIGHT)
 				c0 |= 0x01;
-			fifo_write_char(&sc->rfifo, 0xFA);
-			fifo_write_char(&sc->rfifo, c0);
-			fifo_write_char(&sc->rfifo, 0x00);
-			fifo_write_char(&sc->rfifo, 100);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, c0);
+			fifo_write_char(sc, &sc->rfifo, 0x00);
+			fifo_write_char(sc, &sc->rfifo, 100);
 			break;
 		case 0xEA:
 			/* Set stream mode and reset movement counters */
 			sc->remote_mode = 0;
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			sc->delta_x = 0;
 			sc->delta_y = 0;
 			sc->delta_z = 0;
@@ -857,21 +862,21 @@ again:
 			 * Read Data (if in remote mode).  If not in remote
 			 * mode force an event.
 			 */
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			sc->data_signal = 1;
 			break;
 		case 0xEC:
 			/* Reset Wrap Mode (ignored) */
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			break;
 		case 0xEE:
 			/* Set Wrap Mode (ignored) */
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			break;
 		case 0xF0:
 			/* Set Remote Mode */
 			sc->remote_mode = 1;
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			sc->delta_x = 0;
 			sc->delta_y = 0;
 			sc->delta_z = 0;
@@ -889,16 +894,16 @@ again:
 			 * If we send 0x04 - Now includes z-axis and the
 			 * 4th and 5th mouse buttons.
 			 */
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			switch(sc->zenabled) {
 			case 1:
-				fifo_write_char(&sc->rfifo, 0x03);
+				fifo_write_char(sc, &sc->rfifo, 0x03);
 				break;
 			case 2:
-				fifo_write_char(&sc->rfifo, 0x04);
+				fifo_write_char(sc, &sc->rfifo, 0x04);
 				break;
 			default:
-				fifo_write_char(&sc->rfifo, 0x00);
+				fifo_write_char(sc, &sc->rfifo, 0x00);
 				break;
 			}
 			sc->delta_x = 0;
@@ -913,14 +918,14 @@ again:
 			 */
 			if (sc->ps2_acked == 0) {
 				sc->ps2_acked = 1;
-				fifo_write_char(&sc->rfifo, 0xFA);
+				fifo_write_char(sc, &sc->rfifo, 0xFA);
 			}
-			if (fifo_ready(&sc->wfifo) == 0) {
+			if (fifo_ready(sc, &sc->wfifo) == 0) {
 				cmd_completed = 0;
 				break;
 			}
-			sc->mode.rate = fifo_read_char(&sc->wfifo);
-			fifo_write_char(&sc->rfifo, 0xFA);
+			sc->mode.rate = fifo_read_char(sc, &sc->wfifo);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 
 			/*
 			 * zenabling sequence: 200,100,80 (device id 0x03)
@@ -944,7 +949,7 @@ again:
 			break;
 		case 0xF4:
 			/* Enable data reporting.  Only effects stream mode. */
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			sc->reporting_mode = 1;
 			break;
 		case 0xF5:
@@ -952,7 +957,7 @@ again:
 			 * Disable data reporting.  Only effects stream mode
 			 * and is ignored right now.
 			 */
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			sc->reporting_mode = 1;
 			break;
 		case 0xF6:
@@ -962,7 +967,7 @@ again:
 			 * (reset sampling rate, resolution, scaling and
 			 *  enter stream mode)
 			 */
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			sc->mode.rate = 100;
 			sc->mode.resolution = 4;
 			sc->scaling_mode = 0;
@@ -980,16 +985,16 @@ again:
 			 * Force a resend by guaranteeing that reported_but
 			 * differs from track_but.
 			 */
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			sc->data_signal = 1;
 			break;
 		case 0xFF:
 			/*
 			 * RESET
 			 */
-			fifo_reset(&sc->rfifo);	/* should we do this? */
-			fifo_reset(&sc->wfifo);	/* should we do this? */
-			fifo_write_char(&sc->rfifo, 0xFA);
+			fifo_reset(sc, &sc->rfifo);	/* should we do this? */
+			fifo_reset(sc, &sc->wfifo);	/* should we do this? */
+			fifo_write_char(sc, &sc->rfifo, 0xFA);
 			sc->delta_x = 0;
 			sc->delta_y = 0;
 			sc->delta_z = 0;
@@ -1054,7 +1059,7 @@ cyapapoll(struct cdev *dev, int events, struct thread *td)
 
 	cyapa_lock(sc);
 	if (events & (POLLIN | POLLRDNORM)) {
-		if (sc->data_signal || !fifo_empty(&sc->rfifo))
+		if (sc->data_signal || !fifo_empty(sc, &sc->rfifo))
 			revents = events & (POLLIN | POLLRDNORM);
 		else {
 			sc->isselect = 1;
@@ -1087,7 +1092,7 @@ cyapafilt(struct knote *kn, long hint)
 	sc = (struct cyapa_softc *)kn->kn_hook;
 
 	cyapa_lock(sc);
-	ready = fifo_ready(&sc->rfifo) || sc->data_signal;
+	ready = fifo_ready(sc, &sc->rfifo) || sc->data_signal;
 	cyapa_unlock(sc);
 
 	return (ready);
@@ -1554,7 +1559,7 @@ cyapa_set_power_mode(struct cyapa_softc *sc, int mode)
  * Returns non-zero if the fifo is empty
  */
 static int
-fifo_empty(struct cyapa_fifo *fifo)
+fifo_empty(struct cyapa_softc *sc, struct cyapa_fifo *fifo)
 {
 
 	CYAPA_LOCK_ASSERT(sc);
@@ -1567,7 +1572,7 @@ fifo_empty(struct cyapa_fifo *fifo)
  * the fifo without wrapping the fifo buffer.
  */
 static size_t
-fifo_ready(struct cyapa_fifo *fifo)
+fifo_ready(struct cyapa_softc *sc, struct cyapa_fifo *fifo)
 {
 	size_t n;
 
@@ -1587,7 +1592,7 @@ fifo_ready(struct cyapa_fifo *fifo)
  * the buffer.
  */
 static char *
-fifo_read(struct cyapa_fifo *fifo, size_t n)
+fifo_read(struct cyapa_softc *sc, struct cyapa_fifo *fifo, size_t n)
 {
 	char *ptr;
 
@@ -1603,7 +1608,7 @@ fifo_read(struct cyapa_fifo *fifo, size_t n)
 }
 
 static uint8_t
-fifo_read_char(struct cyapa_fifo *fifo)
+fifo_read_char(struct cyapa_softc *sc, struct cyapa_fifo *fifo)
 {
 	uint8_t c;
 
@@ -1625,7 +1630,7 @@ fifo_read_char(struct cyapa_fifo *fifo)
  * if the FIFO is full.
  */
 static void
-fifo_write_char(struct cyapa_fifo *fifo, uint8_t c)
+fifo_write_char(struct cyapa_softc *sc, struct cyapa_fifo *fifo, uint8_t c)
 {
 
 	CYAPA_LOCK_ASSERT(sc);
@@ -1641,7 +1646,7 @@ fifo_write_char(struct cyapa_fifo *fifo, uint8_t c)
  * the fifo.
  */
 static size_t
-fifo_space(struct cyapa_fifo *fifo)
+fifo_space(struct cyapa_softc *sc, struct cyapa_fifo *fifo)
 {
 	size_t n;
 
@@ -1654,7 +1659,7 @@ fifo_space(struct cyapa_fifo *fifo)
 }
 
 static char *
-fifo_write(struct cyapa_fifo *fifo, size_t n)
+fifo_write(struct cyapa_softc *sc, struct cyapa_fifo *fifo, size_t n)
 {
 	char *ptr;
 
@@ -1667,7 +1672,7 @@ fifo_write(struct cyapa_fifo *fifo, size_t n)
 }
 
 static void
-fifo_reset(struct cyapa_fifo *fifo)
+fifo_reset(struct cyapa_softc *sc, struct cyapa_fifo *fifo)
 {
 
 	CYAPA_LOCK_ASSERT(sc);
