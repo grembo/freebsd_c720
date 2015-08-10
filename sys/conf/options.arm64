@@ -1,6 +1,7 @@
-# $FreeBSD: head/sys/conf/options.arm64 282154 2015-04-28 17:02:43Z andrew $
+# $FreeBSD: head/sys/conf/options.arm64 286121 2015-07-31 10:00:45Z zbb $
 
-ARM64		opt_global.h
-SOCDEV_PA	opt_global.h
-SOCDEV_VA	opt_global.h
-VFP		opt_global.h
+ARM64				opt_global.h
+SOCDEV_PA			opt_global.h
+SOCDEV_VA			opt_global.h
+THUNDERX_PASS_1_1_ERRATA	opt_global.h
+VFP				opt_global.h
