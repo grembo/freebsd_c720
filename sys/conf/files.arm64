@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/files.arm64 286133 2015-07-31 15:32:32Z andrew $
+# $FreeBSD: head/sys/conf/files.arm64 286477 2015-08-08 21:32:03Z zbb $
 arm/arm/devmap.c		standard
 arm/arm/generic_timer.c		standard
 arm/arm/pmu.c			standard
@@ -50,6 +50,9 @@ arm64/arm64/uma_machdep.c	standard
 arm64/arm64/unwind.c		optional	ddb | kdtrace_hooks | stack
 arm64/arm64/vfp.c		standard
 arm64/arm64/vm_machdep.c	standard
+arm64/cavium/thunder_pcie.c	optional	thunder_pci fdt
+arm64/cavium/thunder_pcie_pem.c	optional	thunder_pci
+arm64/cavium/thunder_pcie_common.c	optional	thunder_pci
 crypto/blowfish/bf_enc.c	optional	crypto | ipsec
 crypto/des/des_enc.c		optional	crypto | ipsec | netsmb
 dev/acpica/acpi_if.m		optional	acpi

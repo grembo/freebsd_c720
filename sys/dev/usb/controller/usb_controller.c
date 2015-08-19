@@ -1,4 +1,4 @@
-/* $FreeBSD: head/sys/dev/usb/controller/usb_controller.c 277136 2015-01-13 16:37:43Z hselasky $ */
+/* $FreeBSD: head/sys/dev/usb/controller/usb_controller.c 286773 2015-08-14 12:57:53Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -231,7 +231,8 @@ usb_detach(device_t dev)
 	/* Get rid of USB callback processes */
 
 	usb_proc_free(USB_BUS_GIANT_PROC(bus));
-	usb_proc_free(USB_BUS_NON_GIANT_PROC(bus));
+	usb_proc_free(USB_BUS_NON_GIANT_ISOC_PROC(bus));
+	usb_proc_free(USB_BUS_NON_GIANT_BULK_PROC(bus));
 
 	/* Get rid of USB explore process */
 
@@ -395,7 +396,8 @@ usb_bus_explore(struct usb_proc_msg *pm)
 		 */
 		usb_proc_rewakeup(USB_BUS_CONTROL_XFER_PROC(bus));
 		usb_proc_rewakeup(USB_BUS_GIANT_PROC(bus));
-		usb_proc_rewakeup(USB_BUS_NON_GIANT_PROC(bus));
+		usb_proc_rewakeup(USB_BUS_NON_GIANT_ISOC_PROC(bus));
+		usb_proc_rewakeup(USB_BUS_NON_GIANT_BULK_PROC(bus));
 #endif
 
 		USB_BUS_UNLOCK(bus);
@@ -860,9 +862,13 @@ usb_attach_sub(device_t dev, struct usb_bus *bus)
 	    &bus->bus_mtx, device_get_nameunit(dev), USB_PRI_MED)) {
 		device_printf(dev, "WARNING: Creation of USB Giant "
 		    "callback process failed.\n");
-	} else if (usb_proc_create(USB_BUS_NON_GIANT_PROC(bus),
+	} else if (usb_proc_create(USB_BUS_NON_GIANT_ISOC_PROC(bus),
+	    &bus->bus_mtx, device_get_nameunit(dev), USB_PRI_HIGHEST)) {
+		device_printf(dev, "WARNING: Creation of USB non-Giant ISOC "
+		    "callback process failed.\n");
+	} else if (usb_proc_create(USB_BUS_NON_GIANT_BULK_PROC(bus),
 	    &bus->bus_mtx, device_get_nameunit(dev), USB_PRI_HIGH)) {
-		device_printf(dev, "WARNING: Creation of USB non-Giant "
+		device_printf(dev, "WARNING: Creation of USB non-Giant BULK "
 		    "callback process failed.\n");
 	} else if (usb_proc_create(USB_BUS_EXPLORE_PROC(bus),
 	    &bus->bus_mtx, device_get_nameunit(dev), USB_PRI_MED)) {

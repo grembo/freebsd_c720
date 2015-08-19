@@ -1,4 +1,4 @@
-# $FreeBSD: head/sys/conf/NOTES 285691 2015-07-19 16:05:26Z markm $
+# $FreeBSD: head/sys/conf/NOTES 286839 2015-08-17 07:36:12Z markm $
 #
 # NOTES -- Lines that can be cut/pasted into kernel and hints configs.
 #
@@ -2981,9 +2981,10 @@ options 	MAXFILES=999
 
 # Random number generator
 # Only ONE of the below two may be used; they are mutually exclusive.
-# If neither is present, then the Fortuna algorithm is used.
-options 	RANDOM_YARROW	# Yarrow CSPRNG (old default)
-#options 	RANDOM_DUMMY	# Dummy CSPRNG that always blocks
+# If neither is present, then the Fortuna algorithm is selected.
+#options 	RANDOM_YARROW	# Yarrow CSPRNG (old default)
+#options 	RANDOM_LOADABLE	# Allow the algorithm to be loaded as
+				# a module.
 # For developers.
 options 	RANDOM_DEBUG	# Extra debugging messages
 

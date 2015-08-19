@@ -1,7 +1,7 @@
 # Makefile.arm -- with config changes.
 # Copyright 1990 W. Jolitz
 #	from: @(#)Makefile.i386	7.1 5/10/91
-# $FreeBSD: head/sys/conf/Makefile.arm 276479 2014-12-31 20:31:32Z dim $
+# $FreeBSD: head/sys/conf/Makefile.arm 286727 2015-08-13 15:16:34Z marcel $
 #
 # Makefile for FreeBSD
 #
@@ -65,10 +65,6 @@ SYSTEM_LD_TAIL +=;sed s/" + SIZEOF_HEADERS"// ldscript.$M\
 		${OBJCOPY} -S -O binary ${FULLKERNEL}.noheader \
 		${KERNEL_KO}.bin; \
 		rm ${FULLKERNEL}.noheader
-
-.if defined(MFS_IMAGE)
-SYSTEM_LD_TAIL += ;sh ${S}/tools/embed_mfs.sh ${KERNEL_KO}.bin ${MFS_IMAGE};
-.endif
 
 FILES_CPU_FUNC = \
 	$S/$M/$M/cpufunc_asm_arm9.S \
